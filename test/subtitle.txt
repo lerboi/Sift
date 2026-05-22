@@ -1,0 +1,180 @@
+Welcome to Topic 2 of
+your final project. At the start of each topic, I'm going to guide you through what you need to
+do at this point, and all of the steps and we start with
+what phase we're in. We're now in the discovery
+phase of the project. We started that in
+the last topic, choosing a project template
+and background research. Now, we really need to focus in on the
+aims of the project, which you probably were
+developing in the last topic, and developing the project
+pitch and proposals. This is really where you're getting to the concepts
+of what you're doing and then in
+the next topic, we'll get further into
+the literature review, which is very closely linked
+to the background research. I said at the beginning that testing is
+throughout the project. It isn't just during
+development or at the end, you need to do it all the time. But what does testing
+mean during discovery, when you haven't got
+any software yet? The testing really means, does your background research
+support your project idea? So you need to be constantly iterating your idea
+as you research, as you read, as
+you watch videos, whatever your research is. As you're seeing new bits
+of background research, you're testing the ideas
+you have in the project, you're thinking,
+does this bit of research support my idea or do I need to change my idea
+and do I need to iterate? Just like software development
+is an iterative process, so design and concept is
+an iterative process where you're constantly
+coming up with ideas, reading, comparing your ideas
+to what you're reading, and then possibly changing
+your project and then thinking of new areas to read based on what you've
+already found out. Still even at this stage, think of it in terms
+of a testing process. So what are we doing
+in this topic? It's part of the
+discovery phase. The first thing you
+actually need to do is your project ethics. This is really checking
+that you're not doing anything that could
+be potentially harming people or cause harm, and I'll talk about
+that in a sec. But this is going to be a quiz. So you're going to
+be asked a number of questions that check
+exactly the type of research and work you're
+going to do and make sure that they don't
+violate any ethical norms. Possibly, you might answer no to some of these
+questions or sorry, yes, which is the wrong answer, so you are doing
+something that is potentially ethically
+problematic, that's not an absolute failure, but you would need to
+discuss the project with your tutor and seek
+further ethical approval. So we generally recommend
+that you don't do anything that slide up
+in the ethics quiz. Then at the end of this topic, you'll be submitting
+a project proposal which is marked by your tutor, which will build on your
+pitch from last topic. What is the ethics proposal? In academia, we have a
+strong code of ethics, the kind of research, the kind of work we can do. That means that we
+really cannot do any work that would cause
+harm or legal problems. This goes back a
+long way obviously, but in some ways, it was formed in
+the discipline of psychology in the 1950s
+and '60s where there was certainly experiments that
+caused ethical problems. A famous one is the Milgram
+obedience experiment. What happened was that participants were invited
+in to do what they were told was an experiment on learning and there
+was someone they were told was another participant in another room who was being
+tested on some learning. If that other participant
+got things wrong, the main participant had to give the other participant
+an electric shock. What they found was quite
+shockingly, no pun intended, that many of the
+participants were willing to severely electric-shock
+another person to the level at which that other person
+appeared to be dead. Of course, if you were actually
+killing the other person, that would be deeply unethical.
+They weren't doing that. The other participant
+was an actor and they were not
+receiving electric shocks. But nonetheless, the impact
+on the participant that was supposedly giving
+the electric shocks was really traumatic,
+as you can imagine. If you think you've
+killed another person, whether or not that person was actually killed and they
+were told it wasn't, they knew after that point that they were capable
+of doing that. That's a really deeply
+shocking experience. At that time it was decided
+that we needed to control ethics of research so that people could not want
+that kind of experiment again. Oddly enough I was
+involved in running a replication of
+that experiment, but in virtual reality. It was very clear that there
+was no other real person. That was a project led by [inaudible] who gave
+the guest lecture on virtual reality course. What that introduces that
+every university has to have an ethics review board that checks any research
+when the student work, that it's ethically safe. What could be ethically unsafe? Anything that could potentially
+harm human participants. Anything particularly
+involving children or vulnerable adults is
+carefully scrutinized. It's particularly true, for
+example, of medical patients. Once you're working with
+children or medical patients, you have to be very
+careful and we would certainly recommend you
+do not work with children. You particularly do not work with medical
+patients because you really require a whole set
+of medical ethics there, which we as computer
+scientists we're not qualified to approve any
+metric medical intervention. You can do health projects but
+not with medical patients. It's also tight
+controls on animals, if there's animals again, we recommend you don't
+work with animals. But other things as well
+as that kind of harm, environmental harm, working
+with dangerous substances, and one that is
+really a bit more likely in computer science is the use of copyrighted material. You need to be very careful with copyrighted material and
+the use of personal data. In the UK, we have very
+strong data protection laws. You need to abide by that. That brings me to another point. The laws are different
+in different countries. Because this is the University
+of London degree based in the UK, wherever you are, we will be
+applying UK Research Ethics. This is among the
+strictest in the world. I think they should apply
+well to other countries, but you should of course, be careful that
+you do not violate any laws in your own country that may not apply in the UK. It's very important to
+follow those ethics. But essentially, in
+the ethics quiz, if you can say that
+you're not doing any of the ethically risky things
+that are listed, you're fine. It's possible that you could go ahead in discussion
+with your tutor with more rigorous ethics procedure if you are doing those it
+can be really essential. But I personally
+encourage you to look at ways in which
+you don't do that. For example, you may
+be designing something that's ultimately
+for children or medical patients
+that could be used, but test it with adults. Test it with non
+vulnerable healthy adults if you're doing that testing. That's typically what happens with medical apps generally. You go through a
+testing phase with healthy adults to
+make sure it works before you go into medical
+phase with patients, where things are taken
+much more carefully. That was the ethics, first thing you need to do. Now let's move on to
+project proposal, which is what you need to
+do at the end and it's the main deliverable
+of this topic. It will be a three-minute
+video presentation, just like the one you
+did in the last topic , but developed from that. As you'll probably see, we'll be giving you opportunity to practice most of
+the things you're doing by peer reviews before
+you actually submit them. It's very important for you
+to take on that practice. That's a really good
+opportunity for you. You should include the
+idea for the projects. You should name the template
+that you're using so that markers can just
+cross-refer to the templates, and give the motivation
+for the project, which is, why is this
+an important project? This should be based on a few examples of
+related projects. We recommend 2-4. You can do more if you like, but it's probably difficult to fit that much more in the time. Really your motivation and the idea for the
+project should be grounded in that research, as I've said when I
+talked about testing, you should always be testing
+that the idea works based on the needs of users, etc. How are we going to mark this? Well, it's going to
+use the same criteria as we used in the last
+topic for the pitch. Does the report display
+knowledge of the area of study, previous work and
+academic literature? This is those tactful bits
+of background research. Does it critically evaluate
+the previous works? Are you really making
+that arguments about from the features of
+that previous work, the benefits, the
+problems with it, the gaps in that literature to the work that
+you're doing yourself? Is the project concept justified based on
+the domain and users? You really need to make sure that you've developed an
+idea that really fits well, that is really based on
+that background research. That background research is, in essence, key to
+the project proposal. That's really the important
+thing that you're doing in this discovery phase. That's what discovery means, and it's really strongly informing what you're doing
+in your project idea. This is the first big
+milestone of your project. This is the first thing you'll
+be submitting to tutors. It doesn't count
+your final grade, but you need to pass it. If you fail you'll get another
+opportunity to amend it. But it's also really important moment to get feedback from a professional tutor to inform the further
+development of your project. It's really important
+to do this well, to really think this
+through because for the remaining 21 weeks you'll
+be working on this project. You need to make sure
+it's both a good idea, one that you can achieve
+and it's a design phase, and also one that you're
+passionate about. I mean, I think that's really important and we've
+heard it from our students and our teachers that the thing that will drive you through the 21
+weeks is the passion and excitement you
+have of developing these projects and
+make sure that this is something you really want to do and
+you're really driven by. Do that work really, think through what you're doing, come up with a great
+project's idea, and then you've got your
+opportunity to actually do it.

@@ -1,0 +1,172 @@
+# Sift — Project Proposal Plan
+
+Plan for completing Topic 2 (Discovery phase) deliverables for the FYP. Source: lecturer briefing transcript (`/Users/leroyngzz/FYP/test/subtitle.txt`).
+
+## Phase context
+
+- We are in the **Discovery phase** (topic 2). Came from project-template selection and background research in topic 1.
+- Discovery work is **iterative**: read → test idea against research → refine → repeat. Even pre-code, this counts as "testing" — does the research support the idea?
+- Outputs of this topic feed directly into the literature review (next topic).
+
+## Deliverables for this topic
+
+1. **Ethics quiz** — first action. Confirms the project doesn't violate UK research ethics norms.
+2. **Project Proposal** — main deliverable. **3-minute video presentation** built on the topic-1 pitch, plus the supporting slides ("powerpoints") that drive it.
+
+Doesn't count toward final grade, **but must pass**. Failed proposals can be amended once. Tutor feedback here is critical because the next 21 weeks of work depend on this concept being sound.
+
+---
+
+## 1. Ethics quiz — Sift-specific check
+
+UK Research Ethics applies (University of London). Most quiz items are clear "no" for Sift, but two areas need a deliberate position written into the proposal so the tutor sees we've thought about it:
+
+| Risk area | Sift's position |
+|---|---|
+| Children / vulnerable adults | **N/A.** App is for adult self-directed investors. Age-gate at signup (18+). |
+| Medical patients | **N/A.** Financial domain. |
+| Animals | **N/A.** |
+| Environmental / dangerous substances | **N/A.** |
+| **Copyrighted material** | **Needs care.** SEC filings are public domain (US gov work). Earnings call **transcripts are typically copyrighted** by the publishing service (Motley Fool, Seeking Alpha). Mitigation: use licensed APIs (`earningscalls.dev`, API Ninjas, Quartr) — never scrape paywalled sites. Document data sources + licences in the proposal. |
+| **Personal data (UK GDPR)** | **Needs care.** Watchlists, email, subscription state = personal data. Mitigation: Supabase EU region, RLS, no PII in logs, ToS + privacy notice, data-deletion endpoint. Mention briefly in proposal. |
+| Financial advice regulation | **Not strictly ethics, but flag it.** Sift is positioned as a research/education tool — never personal advice. Avoids FCA "regulated advice" territory. |
+
+**Action:** before taking the quiz, draft a one-paragraph note on copyright + GDPR positions so we can answer confidently and reference it in the proposal.
+
+---
+
+## 2. Project Proposal — content (the 3-minute video)
+
+The lecturer was specific about what must be included. Structure the video around these in order:
+
+### 2.1 Required content (per the brief)
+
+1. **The project idea** — what Sift is, in one or two sentences a non-technical viewer can grasp.
+2. **Template reference** — explicitly name **CM3020 AI, Template 4.2 — Financial Advisor Bot**, so markers can cross-refer.
+3. **Motivation** — why this matters. The gap: institutional-grade earnings synthesis (Bloomberg, AlphaSense) costs $$$; retail tools (Yahoo, broker apps) show only the date with zero analysis. Self-directed retail investors have no middle option. Sift fills that gap.
+4. **Related work — 2 to 4 examples** (lecturer's recommendation; more is hard to fit in 3 minutes). Both academic and commercial. See section 3 below.
+5. **Critical evaluation of related work** — what each one does well, what it lacks, the gap it leaves that Sift addresses. The lecturer was emphatic: *features → benefits → problems → gaps → your work*.
+6. **Justification of the concept** — Sift's design follows directly from the gaps identified. Tie back to user needs (self-directed retail investors who want to think for themselves).
+
+### 2.2 Marking criteria (same as topic-1 pitch)
+
+- Displays knowledge of the area of study, previous work, and academic literature
+- Critically evaluates previous works
+- Project concept is justified based on domain and users
+
+The **background research is the centre of gravity** — the lecturer said it's "in essence, key to the project proposal." Spend most prep time here.
+
+### 2.3 Three-minute script structure (target word counts)
+
+3 minutes ≈ 420–480 words at a comfortable speaking pace.
+
+| Section | Time | Words | Content |
+|---|---|---|---|
+| Hook + the gap | 0:00–0:25 | ~60 | The opening: institutional earnings tools cost $25k/year; retail tools show a date and nothing else. Self-directed investors are stuck in between. |
+| The idea (Sift) | 0:25–0:55 | ~70 | One-sentence what Sift is + the four core capabilities (pre-earnings briefing, live 8-K alert, transcript analysis, surprise classifier). Name the template. |
+| Related work | 0:55–1:55 | ~140 | 2–4 examples, ~25–35s each, weaving feature + limitation. |
+| The gap → why Sift | 1:55–2:20 | ~55 | Synthesise: what the related work as a whole misses, and how Sift's design fills it. |
+| Technical approach (briefly) | 2:20–2:45 | ~55 | RN mobile front, Supabase + Modal back, surprise classifier as the AI core, LLM for synthesis. Stress: backed by SEC EDGAR (free), Finnhub, transcript APIs. |
+| Outcome + close | 2:45–3:00 | ~40 | What the FYP submission will demonstrate; reiterate the educational/research framing. |
+
+---
+
+## 3. Background research — the 2 to 4 examples to cite
+
+Mix academic (literature) and commercial (related products). **Goal: every citation must end with a clear "what this leaves out that Sift will address."**
+
+### Candidate academic sources (pick 2)
+
+- **Araci, 2019 — FinBERT.** Domain-specific BERT for financial sentiment. Limitation per recent comparative study: outperformed by GPT-4o + prompt engineering on financial text by ~10% (MDPI 2025). Justifies Sift's choice of API LLMs over fine-tuned local models.
+- **Loughran & McDonald, 2011 — finance-specific sentiment lexicon.** Foundational; shows generic sentiment dictionaries misclassify finance text. Motivates domain-aware NLP, but is itself dictionary-based and dated.
+- **Bernard & Thomas, 1989 / 1990 — Post-Earnings Announcement Drift.** Classic finance literature establishing that prices drift in the direction of the earnings surprise for weeks after. Justifies *why* an earnings-surprise classifier has economic value.
+- **2024–2025 papers on transformer-based earnings call analysis** (e.g. tone shift, guidance language detection). Shows current research direction; gap = none of this is productised for retail.
+
+### Candidate commercial / related products (pick 2)
+
+- **Earnings Whispers** — existing retail-facing earnings calendar with "whisper numbers." Mostly web, dated mobile, no AI synthesis. Gap: no transcript analysis, no AI-generated briefings.
+- **Bloomberg Terminal / AlphaSense / Sentieo** — institutional gold standard for earnings synthesis. Gap: $1k–$25k/year, desktop-only, locked behind enterprise contracts. Inaccessible to retail.
+- **Yahoo Finance / broker app calendars** — free, ubiquitous. Gap: pure dates + headline numbers, zero analytical layer.
+- **Seeking Alpha** — has earnings articles + transcripts. Gap: editorial/opinion-led, paywalled, no real-time alerts, not mobile-native, not synthesised by AI.
+
+**Recommended set for the video (2 academic + 2 commercial = 4 total):**
+1. Araci 2019 (FinBERT) → motivates LLM-based NLP
+2. Bernard & Thomas (PEAD) → motivates the surprise classifier as the AI core
+3. AlphaSense → top-end gap (price)
+4. Earnings Whispers or Yahoo Finance → bottom-end gap (no analysis)
+
+This gives a clean academic-foundations + market-positioning argument.
+
+---
+
+## 4. Slide deck plan ("powerpoints")
+
+Slides drive the 3-minute video — keep them visual, not text-walls. Target ~6–8 slides.
+
+| # | Title | Visual |
+|---|---|---|
+| 1 | **Title** — Sift, plus name, programme, template ref | Simple title card, app mark/logo placeholder |
+| 2 | **The gap** | Two-column: institutional ($$$) vs retail (just a date) — Sift in the middle |
+| 3 | **What Sift does** | 4-icon row: briefing / alert / transcript / classifier |
+| 4 | **Related work — academic** | FinBERT + PEAD with one-line takeaways |
+| 5 | **Related work — commercial** | AlphaSense + Earnings Whispers / Yahoo with one-line takeaways |
+| 6 | **The gap, summarised** | Single visual showing what each existing option lacks |
+| 7 | **Approach** | Architecture sketch (simplified from `SETUP.md`) |
+| 8 | **Outcome + close** | What we'll submit, plus the educational-framing line |
+
+Design notes: high contrast, large type, one idea per slide, no bullet lists with more than 3 items, screenshot/diagram where possible. If using brand colours, pick a palette early (Sift identity) so slides + future marketing are consistent.
+
+---
+
+## 5. Video production plan
+
+- **Format:** screen recording of slides + voice-over. Webcam picture-in-picture optional but adds presence — recommended for the open and close.
+- **Tools:** OBS or QuickTime for capture; CapCut / Final Cut / iMovie for cuts. Audio: any condenser/USB mic; record in a soft-furnished room to kill echo.
+- **Script:** write it out in full (≈420–480 words), cut to 3:00 or under. Practice 3–5 times before recording.
+- **Pace:** slightly slower than natural speech. Allow a 1-second pause between sections.
+- **Captions:** burn in subtitles or upload an SRT — accessibility + helps markers if audio quality dips.
+- **Export:** 1080p, mp4, target ≤200 MB so it uploads cleanly to the submission portal.
+
+---
+
+## 6. Iteration + peer review
+
+The lecturer flagged peer review as a **valuable practice opportunity** before submission. Plan:
+
+1. Draft script + slides → record a rough cut.
+2. Submit to peer review.
+3. Incorporate feedback, re-record.
+4. Final submission.
+
+Build at least one extra week of slack for this. Don't ship the first take.
+
+---
+
+## 7. Timeline (work backwards from submission)
+
+Let `D` = submission date. Adjust to actual deadline.
+
+| When | Task |
+|---|---|
+| D − 14 days | Complete background research; pick the 4 sources to cite. Take ethics quiz. |
+| D − 11 days | Write full video script. |
+| D − 9 days | Build slide deck. |
+| D − 7 days | Record rough cut. |
+| D − 6 days | Submit to peer review. |
+| D − 3 days | Incorporate feedback; re-record final. |
+| D − 1 day | Buffer for export, captions, upload tests. |
+| D | Submit. |
+
+---
+
+## Open questions to resolve before recording
+
+- Which exact academic sources to cite (need to read abstracts of the 2025 transformer-on-earnings papers to pick the strongest one).
+- Whether to include a quick on-screen demo mock — even a static UI mock helps the "what Sift does" slide land.
+- Brand identity decisions for slides: colour, type, logo treatment.
+
+---
+
+## Next concrete step
+
+Decide the **exact 4 sources to cite** and write the **full 420–480 word script**. Slides and recording follow naturally once the script is locked.
