@@ -1,0 +1,63 @@
+# Sift — Project Proposal Video Script
+
+**Target:** ~3:45, ~570 words. Speak slightly slower than natural conversation. One-second pauses between sections.
+
+---
+
+## Script
+
+**[0:00 — Slide 1: Title]**
+
+This is the proposal for my final-year project for CM3070 Computer Science Final Project, working from template four-point-two — the Financial Advisor Bot. The project is called Sift. It looks at whether modern AI can take dense company earnings releases and explain them in plain English to everyday investors who don't have a financial background.
+
+**[0:18 — Slide 2: Motivation]** 
+
+Each quarter, US public companies file dense 8-K reports, multi-page press releases, and hour-long earnings calls — all written for professional analysts, heavy on technical terms like guidance, margins, EBITDA, and free cash flow. 
+
+The goal is to allow everyday investors truly understand the financial reports of companies to make a more educated and informed decision when they decide to buy any stock.
+
+**[0:55 — Slide 3: Key terms]**
+
+A quick note on four terms used throughout. SEC EDGAR is the US government's free database of company filings — the project uses it as its source of raw data. An 8-K is a short report companies publish when something important happens, including their earnings — the project uses these as the signal to start analysing a release. An earnings call transcript is the written record of the executives' quarterly briefing to investors — the project reads it to detect shifts in tone and outlook. And the consensus estimate is the average prediction analysts make for a company's earnings — the project uses it as context, to help the user see whether the actual result was above or below expectations.
+
+**[1:40 — Slide 4: Related work]**
+
+These 4 works help validate the project deisgn. 
+
+From the academic side: Araci's 2019 FinBERT was a strong BERT-based baseline for financial sentiment, but a 2025 comparison study found GPT-4o with careful prompting beats it by about ten percent — which justifies using a general-purpose LLM rather than fine-tuning a specialised model. 
+
+Lusardi and Mitchell's 2014 paper on financial literacy established that retail investors consistently lack the vocabulary and context to fully understand complex financial information — which is exactly what this project aims to address. 
+
+For existing apps, AlphaSense already proves that professional-grade earnings synthesis is technically achievable, but it's enterprise-only and very expensive. And Yahoo Finance and broker apps show retail users earnings dates and headline numbers, but offer no explanation or education.
+
+**[2:50 — Slide 6: Approach]**
+
+The project has four components: a pre-earnings briefing that summarises what to expect, a filing explainer that turns each 8-K into plain English when it's published, a transcript breakdown that summarises the earnings call, and an Ask Sift feature where the user can ask follow-up questions about anything they don't understand. 
+
+Technically: Python workers on Modal handle ingestion and LLM orchestration. Supabase stores results and manages user accounts. The front-end is a React Native mobile app on iOS and Android. The AI core is a single large language model — Claude or GPT — that handles all the summarisation, explanation, and Q&A. 
+
+Evaluation has two parts: manual review of outputs against source filings for accuracy, and a small user study on whether the explanations actually help users understand.
+
+**[3:25 — Slide 7: Deliverables]**
+
+By submission, the project will deliver a working pipeline running on a curated set of fifty tickers, an evaluation report covering accuracy, readability, and user-study results, the mobile application showing the outputs end to end, and supporting documentation. The project is framed as research and education — not financial advice.
+
+---
+
+## Delivery notes
+
+- **Open plainly.** The opening is a direct statement of what the project is — not a hook. Read it deliberately.
+- **The "Putting it together…" beat on slide 5 is the most important sentence.** It's where the critical evaluation the rubric weighs heaviest actually happens. Slow down, pause before it.
+- **Slow down on slide 3.** It's the densest slide — four definitions in a row. Pause briefly between each term.
+- **Watch pace on slide 4.** Four works back to back. Practice until it flows.
+- **Read the closing line deliberately.** "Research and education — not financial advice" is an ethics positioning, not a marketing line — and the AI core is an LLM, so faithfulness and the educational framing both matter for the ethics quiz.
+
+---
+
+## Source citations (for slide credits + tutor reference)
+
+- Araci, D. (2019). *FinBERT: Financial Sentiment Analysis with Pre-trained Language Models.* arXiv:1908.10063.
+- Lusardi, A., & Mitchell, O. S. (2014). *The Economic Importance of Financial Literacy: Theory and Evidence.* Journal of Economic Literature, 52(1), 5–44.
+- Comparative GPT-4o vs FinBERT study (2025), MDPI Electronics 14(6), 1090.
+- AlphaSense (https://www.alpha-sense.com) — commercial reference.
+- Yahoo Finance (https://finance.yahoo.com) — commercial reference.
