@@ -1,10 +1,14 @@
 // mock until backend exists. delete this file in one shot when wiring real data.
+// expectedAt = scheduled report time; actualAt = filing time (2 min lag here).
+// filedAt/detectedAt/pushedAt strings retained for the timeline strip ui.
 export function getEventMock(id) {
   const upper = String(id ?? '').toUpperCase();
   return {
     id: upper,
     ticker: 'AAPL',
     period: 'Q4 25',
+    expectedAt: '2026-02-01T16:00:00',
+    actualAt:   '2026-02-01T16:02:00',
     filedAt: 'Feb 1, 2026 · 4:02 PM ET',
     detectedAt: '4:02:08 PM ET',
     pushedAt: '4:02:14 PM ET',

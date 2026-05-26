@@ -4,46 +4,42 @@ import { Sparkline } from '../../components/sparkline';
 import { colors, space, text } from '../../theme';
 import { haptics } from '../../lib/haptics';
 
-const SPARKLINE_COLOR_BY_TREND = {
-  up: 'positive',
-  down: 'negative',
-  flat: 'secondary',
-};
-
-export function WatchlistRow({ symbol, name, nextEarnings, sparkline, briefingReady, trend, onPress, last = false }) {
-  const sparkColor =
-    SPARKLINE_COLOR_BY_TREND[trend] === 'positive'
-      ? colors.signal.positive
-      : SPARKLINE_COLOR_BY_TREND[trend] === 'negative'
-      ? colors.signal.negative
-      : colors.text.secondary;
-
+// sparkline muted by default (b16) — trend prop preserved on the data shape
+// for when real 30d-change data lands and we can re-tint with intent.
+export function WatchlistRow({ symbol, name, nextEarnings, sparkline, briefingReady, onPress, last = false }) {
   return (
     <Pressable
       onPress={() => { haptics.tap(); onPress?.(); }}
       accessibilityRole="button"
-      accessibilityLabel={`${symbol}, ${name}, reports ${nextEarnings.date}, ${nextEarnings.daysAway} days`}
+      accessibilityLabel={`${symbol}, ${name}, reports ${nextEarnings.date}, in ${nextEarnings.daysAway} days${briefingReady ? ', briefing ready' : ''}`}
       style={({ pressed }) => [
         styles.row,
         !last && styles.divider,
         pressed && styles.pressed,
       ]}
     >
-      <View style={styles.left}>
-        <Text style={styles.symbol}>{symbol}</Text>
-        <Text style={styles.name} numberOfLines={1}>{name}</Text>
-      </View>
-      <View style={styles.mid}>
-        <Sparkline data={sparkline} width={64} height={20} color={sparkColor} strokeWidth={1.5} />
-      </View>
-      <View style={styles.right}>
-        <Text style={styles.date}>{nextEarnings.date}</Text>
-        <View style={styles.rightSub}>
-          {briefingReady ? <View style={styles.dot} /> : null}
-          <Text style={styles.days}>{nextEarnings.daysAway}d</Text>
+      <View style={styles.body}>
+        <View style={styles.topLine}>
+          <Text style={styles.symbol} accessibilityLabel={symbol.split('').join(' ')}>{symbol}</Text>
+          <View style={styles.sparkSlot}>
+            <Sparkline data={sparkline} width={72} height={20} color={colors.text.secondary} strokeWidth={1.5} />
+          </View>
+          <View style={styles.right}>
+            <Text style={styles.period}>{nextEarnings.period}</Text>
+            <Text style={styles.countdown}>{nextEarnings.daysAway}d</Text>
+          </View>
+        </View>
+        <View style={styles.subLine}>
+          <Text style={styles.name} numberOfLines={1}>{name}</Text>
+          {briefingReady ? (
+            <View style={styles.badge}>
+              <View style={styles.dot} />
+              <Text style={styles.badgeText}>ready</Text>
+            </View>
+          ) : null}
         </View>
       </View>
-      <ChevronRight size={16} color={colors.text.tertiary} strokeWidth={1.75} style={{ marginLeft: space[2] }} />
+      <ChevronRight size={16} color={colors.text.tertiary} strokeWidth={1.75} style={styles.chev} />
     </Pressable>
   );
 }
@@ -61,13 +57,65 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   pressed: { backgroundColor: colors.bg.elevated },
-  left: { flex: 1, marginRight: space[3] },
-  symbol: { ...text.headlineMono, color: colors.text.primary },
-  name: { ...text.footnote, color: colors.text.secondary, marginTop: 2 },
-  mid: { width: 64, marginRight: space[3], alignItems: 'center', justifyContent: 'center' },
-  right: { alignItems: 'flex-end' },
-  date: { ...text.subhead, color: colors.text.primary },
-  rightSub: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent.default },
-  days: { ...text.footnote, color: colors.text.tertiary },
+  body: { flex: 1 },
+
+  topLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  symbol: {
+    ...text.headlineMono,
+    color: colors.text.primary,
+    minWidth: 56,
+  },
+  sparkSlot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: space[2],
+  },
+  right: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: space[3],
+  },
+  period: {
+    ...text.subhead,
+    color: colors.text.secondary,
+  },
+  countdown: {
+    ...text.subhead,
+    color: colors.text.primary,
+    minWidth: 28,
+    textAlign: 'right',
+  },
+
+  subLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  name: {
+    ...text.footnote,
+    color: colors.text.secondary,
+    flex: 1,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: space[2],
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.accent.default,
+  },
+  badgeText: {
+    ...text.caption,
+    color: colors.accent.default,
+  },
+
+  chev: { marginLeft: space[2] },
 });

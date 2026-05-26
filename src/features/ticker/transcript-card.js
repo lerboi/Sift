@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutAnimation, Platform, UIManager } from 'react-native';
-import { ChevronDown } from 'lucide-react-native';
+import { ChevronDown, MessageCircle } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { colors, space, radius, text } from '../../theme';
 import { Card } from '../../components/card';
@@ -18,7 +18,7 @@ const TONE = {
   bearish: { variant: 'negative', label: '▼ bearish' },
 };
 
-export function TranscriptCard({ period, date, tone, novelTopics = [], snippet }) {
+export function TranscriptCard({ period, date, tone, novelTopics = [], snippet, showDate = true }) {
   const [expanded, setExpanded] = useState(false);
   const reduced = useReducedMotion();
   const chevron = useSharedValue(0);
@@ -31,8 +31,8 @@ export function TranscriptCard({ period, date, tone, novelTopics = [], snippet }
     if (!reduced) {
       LayoutAnimation.configureNext(LayoutAnimation.create(180, 'easeInEaseOut', 'opacity'));
     }
-    chevron.value = withTiming(expanded ? 0 : 1, { duration: 180 });
-    haptics.tap();
+    chevron.value = withTiming(expanded ? 0 : 1, { duration: reduced ? 0 : 180 });
+    haptics.select();
     setExpanded((v) => !v);
   };
 
@@ -47,9 +47,12 @@ export function TranscriptCard({ period, date, tone, novelTopics = [], snippet }
         accessibilityLabel={`${period}, ${tone} tone, ${expanded ? 'expanded' : 'collapsed'}`}
       >
         <View style={styles.headerRow}>
+          <View style={styles.glyphWrap}>
+            <MessageCircle size={16} color={colors.text.tertiary} strokeWidth={1.5} />
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>{period}</Text>
-            <Text style={styles.date}>{date}</Text>
+            {showDate ? <Text style={styles.date}>{date}</Text> : null}
           </View>
           <Pill variant={t.variant} size="sm">{t.label}</Pill>
           <Animated.View style={[chevronStyle, { marginLeft: space[2] }]}>
@@ -83,6 +86,7 @@ const styles = StyleSheet.create({
     marginBottom: space[2],
     gap: space[2],
   },
+  glyphWrap: { marginTop: 3 },
   title: { ...text.headline, color: colors.text.primary },
   date: { ...text.footnote, color: colors.text.tertiary, marginTop: 2 },
   body: { ...text.body, color: colors.text.secondary },

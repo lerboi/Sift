@@ -15,6 +15,7 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 import { colors } from '../src/theme';
 import { WebFrame } from '../src/components/web-frame';
+import { useAuthRouting } from '../src/lib/use-auth-routing';
 
 // override react-navigation default light theme — otherwise navigators paint white above transparent headers
 const SiftNavTheme = {
@@ -41,11 +42,14 @@ export default function RootLayout() {
     JetBrainsMono_500Medium,
   });
 
-  useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+  const authStatus = useAuthRouting();
+  const ready = fontsLoaded && authStatus !== 'loading';
 
-  if (!fontsLoaded) return null;
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
+
+  if (!ready) return null;
 
   return (
     <ThemeProvider value={SiftNavTheme}>

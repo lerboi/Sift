@@ -1,21 +1,37 @@
-import { useRef, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { ScrollView, View, Pressable, Text, StyleSheet } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Bookmark, Trash2, Plus } from 'lucide-react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Card } from '../../components/card';
 import { EmptyState } from '../../components/empty-state';
-import { colors, space, radius, text } from '../../theme';
+import { SortSelector } from '../../components/sort-selector';
+import { colors, space, text } from '../../theme';
 import { haptics } from '../../lib/haptics';
-import { MOCK_WATCHLIST, groupByWeek } from './mock';
+import { MOCK_WATCHLIST } from './mock';
 import { WatchlistRow } from './watchlist-row';
 import { AddTickerSheet } from './add-ticker-sheet';
 import { TICKER_CATALOG } from './ticker-catalog';
 
+const SORT_OPTIONS = [
+  { value: 'date',   label: 'Next earnings' },
+  { value: 'alpha',  label: 'Alphabetical' },
+  { value: 'recent', label: 'Recently added' },
+];
+
+function applySort(items, key) {
+  if (key === 'alpha') return [...items].sort((a, b) => a.symbol.localeCompare(b.symbol));
+  if (key === 'date')  return [...items].sort((a, b) => a.nextEarnings.daysAway - b.nextEarnings.daysAway);
+  return items; // 'recent' — preserve insertion order (newer items are prepended)
+}
+
 export default function WatchlistScreen() {
   const router = useRouter();
   const [items, setItems] = useState(MOCK_WATCHLIST);
+  const [sortKey, setSortKey] = useState('date');
   const addSheet = useRef(null);
+
+  const sorted = useMemo(() => applySort(items, sortKey), [items, sortKey]);
 
   const remove = (symbol) => {
     haptics.warning();
@@ -25,7 +41,6 @@ export default function WatchlistScreen() {
   const add = (symbol) => {
     const entry = TICKER_CATALOG.find((t) => t.symbol === symbol);
     if (!entry) return;
-    // mock — real flow seeds from supabase. days/period filled with placeholders.
     setItems((cur) => [
       {
         symbol: entry.symbol,
@@ -81,8 +96,6 @@ export default function WatchlistScreen() {
     );
   }
 
-  const groups = groupByWeek(items);
-
   return (
     <>
       <Stack.Screen options={screenOptions} />
@@ -91,22 +104,21 @@ export default function WatchlistScreen() {
         contentContainerStyle={styles.scroll}
         contentInsetAdjustmentBehavior="automatic"
       >
-        {groups.map((g) => (
-          <View key={g.label} style={styles.group}>
-            <Text style={styles.label}>{g.label}</Text>
-            <Card padding={0} style={styles.card}>
-              {g.items.map((item, i) => (
-                <SwipeableRow key={item.symbol} onRemove={() => remove(item.symbol)}>
-                  <WatchlistRow
-                    {...item}
-                    onPress={() => openTicker(item.symbol)}
-                    last={i === g.items.length - 1}
-                  />
-                </SwipeableRow>
-              ))}
-            </Card>
-          </View>
-        ))}
+        <View style={styles.sortRow}>
+          <SortSelector options={SORT_OPTIONS} value={sortKey} onChange={setSortKey} />
+        </View>
+
+        <Card padding={0} style={styles.card}>
+          {sorted.map((item, i) => (
+            <SwipeableRow key={item.symbol} onRemove={() => remove(item.symbol)}>
+              <WatchlistRow
+                {...item}
+                onPress={() => openTicker(item.symbol)}
+                last={i === sorted.length - 1}
+              />
+            </SwipeableRow>
+          ))}
+        </Card>
       </ScrollView>
       <AddTickerSheet ref={addSheet} onAdd={add} excludeSymbols={items.map((i) => i.symbol)} />
     </>
@@ -146,11 +158,9 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg.base },
   scroll: { padding: space[4], paddingBottom: space[8] },
   scrollEmpty: { flexGrow: 1, justifyContent: 'center' },
-  group: { marginBottom: space[5] },
-  label: {
-    ...text.micro,
-    color: colors.text.tertiary,
-    letterSpacing: 0.5,
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: space[3],
     paddingHorizontal: space[2],
   },

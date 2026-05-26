@@ -1,10 +1,8 @@
 import { View, Pressable, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
 import { colors, space, radius } from '../theme';
 import { haptics } from '../lib/haptics';
-
-const PRESS_IN = { duration: 80 };
-const PRESS_OUT = { duration: 140 };
+import { useReducedMotion } from '../lib/use-reduced-motion';
 
 export function Card({
   children,
@@ -15,6 +13,8 @@ export function Card({
 }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const reduced = useReducedMotion();
+  const inDur = reduced ? 0 : 80;
 
   const inner = (
     <View style={[styles.card, { padding: space[padding] }, style]}>
@@ -29,11 +29,13 @@ export function Card({
       <Pressable
         onPress={onPress}
         onPressIn={() => {
-          scale.value = withTiming(0.98, PRESS_IN);
+          scale.value = withTiming(0.98, { duration: inDur });
           haptics.tap();
         }}
         onPressOut={() => {
-          scale.value = withTiming(1, PRESS_OUT);
+          scale.value = reduced
+            ? withTiming(1, { duration: 0 })
+            : withSpring(1, { damping: 22, stiffness: 180, mass: 1 });
         }}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}

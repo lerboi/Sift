@@ -1,12 +1,16 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Skeleton } from '../../components/skeleton';
-import { colors, space, text, radius } from '../../theme';
+import { colors, space, radius } from '../../theme';
 
 export function HomeSkeleton() {
   return (
     <View>
       <View style={styles.section}>
-        <Text style={styles.label}>UPCOMING</Text>
+        <View style={styles.headerSkeleton}>
+          <Skeleton width={56} height={10} />
+          <View style={{ width: space[2] }} />
+          <Skeleton width={80} height={14} />
+        </View>
         {[0, 1, 2].map((i) => (
           <View key={i} style={styles.card}>
             <View style={styles.row}>
@@ -30,10 +34,9 @@ export function HomeSkeleton() {
 
 const styles = StyleSheet.create({
   section: { marginTop: space[2] },
-  label: {
-    ...text.micro,
-    color: colors.text.tertiary,
-    letterSpacing: 0.5,
+  headerSkeleton: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
     marginBottom: space[3],
   },
   card: {

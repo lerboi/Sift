@@ -1,10 +1,8 @@
 import { ActivityIndicator, Pressable, Text, StyleSheet, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
 import { colors, space, radius, text } from '../theme';
 import { haptics } from '../lib/haptics';
-
-const PRESS_IN = { duration: 80 };
-const PRESS_OUT = { duration: 140 };
+import { useReducedMotion } from '../lib/use-reduced-motion';
 
 export function Button({
   variant = 'primary',
@@ -18,14 +16,18 @@ export function Button({
 }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const reduced = useReducedMotion();
+  const inDur = reduced ? 0 : 80;
 
   const handlePressIn = () => {
     if (disabled || loading) return;
-    scale.value = withTiming(0.98, PRESS_IN);
+    scale.value = withTiming(0.98, { duration: inDur });
     haptics.tap();
   };
   const handlePressOut = () => {
-    scale.value = withTiming(1, PRESS_OUT);
+    scale.value = reduced
+      ? withTiming(1, { duration: 0 })
+      : withSpring(1, { damping: 22, stiffness: 180, mass: 1 });
   };
 
   const isInactive = disabled || loading;
@@ -75,6 +77,10 @@ const VARIANT_STYLES = {
   ghost: {
     container: { backgroundColor: 'transparent', borderWidth: 0 },
     label: { color: colors.accent.default },
+  },
+  destructive: {
+    container: { backgroundColor: colors.signal.negative, borderWidth: 0 },
+    label: { color: colors.accent.on },
   },
 };
 

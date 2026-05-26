@@ -22,6 +22,11 @@ export const TICKER_CATALOG = [
   { symbol: 'V',    name: 'Visa Inc.' },
 ];
 
+export function getCompanyName(symbol) {
+  const s = String(symbol).toUpperCase();
+  return TICKER_CATALOG.find((t) => t.symbol === s)?.name ?? `${s} Corp.`;
+}
+
 export function searchCatalog(query, excludeSymbols = []) {
   const q = query.trim().toUpperCase();
   const exclude = new Set(excludeSymbols);

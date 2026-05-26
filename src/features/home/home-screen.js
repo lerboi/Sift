@@ -1,31 +1,35 @@
-import { useEffect } from 'react';
-import { ScrollView, View, Text, StyleSheet, RefreshControl } from 'react-native';
+import { useEffect, useMemo } from 'react';
+import { ScrollView, View, StyleSheet, RefreshControl } from 'react-native';
 import { Bookmark } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { EarningsCard } from '../../components/earnings-card';
-import { EventCard } from '../../components/event-card';
+import { DayHeader } from '../../components/day-header';
+import { EventTimelineCard } from '../../components/event-timeline-card';
 import { DisclaimerFooter } from '../../components/disclaimer-footer';
 import { EmptyState } from '../../components/empty-state';
+import { InlineError } from '../../components/inline-error';
 import { NewEventsPill } from '../../components/new-events-pill';
 import { haptics } from '../../lib/haptics';
-import { colors, space, text } from '../../theme';
+import { groupByDay } from '../../lib/dates';
+import { colors, space } from '../../theme';
 import { useHomeData } from './use-home-data';
 import { HomeSkeleton } from './home-skeleton';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { live, upcoming, recent, loading, refreshing, refresh, pending, promotePending } = useHomeData();
+  const { events, loading, refreshing, refresh, pending, promotePending, error } = useHomeData();
 
   // fire a light haptic exactly when a new event lands while user is on screen
   useEffect(() => {
     if (pending.length > 0) haptics.tap();
   }, [pending.length]);
 
+  const groups = useMemo(() => groupByDay(events), [events]);
+
   const openTicker = (ticker) => router.push(`/watchlist/${ticker}`);
-  const openEvent = (eventId) => router.push(`/events/${eventId}`);
+  // tab-scoped so Today stays highlighted on drill (p11-8)
+  const openEvent = (ticker) => router.push(`/today/events/${ticker}`);
 
-  const isEmpty = !loading && live.length === 0 && upcoming.length === 0 && recent.length === 0;
-
+  const isEmpty = !loading && events.length === 0;
   const showPill = !loading && !isEmpty && pending.length > 0;
 
   return (
@@ -43,12 +47,15 @@ export default function HomeScreen() {
         />
       }
     >
-      {/* sticky slot — always renders so index 0 is stable; pill is conditional */}
       <View style={styles.pillSlot} pointerEvents="box-none">
-        {showPill ? (
-          <NewEventsPill count={pending.length} onTap={promotePending} />
-        ) : null}
+        {showPill ? <NewEventsPill count={pending.length} onTap={promotePending} /> : null}
       </View>
+
+      {error ? (
+        <View style={styles.errorWrap}>
+          <InlineError message={error.message ?? 'Could not load events.'} code={error.code} onRetry={refresh} />
+        </View>
+      ) : null}
 
       {loading ? (
         <HomeSkeleton />
@@ -62,36 +69,24 @@ export default function HomeScreen() {
         </View>
       ) : (
         <>
-          {live.length > 0 ? (
-            <Section label="LIVE NOW">
-              {live.map((e) => (
-                <View key={e.ticker} style={styles.cardWrap}>
-                  <EventCard {...e} onPress={() => openEvent(e.ticker)} />
-                </View>
-              ))}
-            </Section>
-          ) : null}
-
-          {upcoming.length > 0 ? (
-            <Section label="UPCOMING" first={live.length === 0}>
-              {upcoming.map((e) => (
-                <View key={e.ticker} style={styles.cardWrap}>
-                  <EarningsCard {...e} onPress={() => openTicker(e.ticker)} />
-                </View>
-              ))}
-            </Section>
-          ) : null}
-
-          {recent.length > 0 ? (
-            <Section label="RECENT">
-              {recent.map((e) => (
-                <View key={e.ticker} style={styles.cardWrap}>
-                  <EventCard {...e} onPress={() => openEvent(e.ticker)} />
-                </View>
-              ))}
-            </Section>
-          ) : null}
-
+          {groups.map((g) => (
+            <View key={g.dateISO} style={styles.group}>
+              <DayHeader iso={isoFromGroup(g)} />
+              {g.items.map((e) => {
+                const primary = () => (e.state === 'upcoming' ? openTicker(e.ticker) : openEvent(e.ticker));
+                return (
+                  <View key={`${e.ticker}-${e.period}`} style={styles.cardWrap}>
+                    <EventTimelineCard
+                      {...e}
+                      onPress={primary}
+                      onOpenDetail={() => openEvent(e.ticker)}
+                      onBriefingPress={primary}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          ))}
           <DisclaimerFooter />
         </>
       )}
@@ -99,17 +94,10 @@ export default function HomeScreen() {
   );
 }
 
-function Section({ label, first, children }) {
-  const isLive = label === 'LIVE NOW';
-  return (
-    <View style={[styles.section, first && styles.sectionFirst]}>
-      <View style={styles.sectionLabelRow}>
-        {isLive ? <View style={styles.liveDot} /> : null}
-        <Text style={[styles.sectionLabel, isLive && styles.sectionLabelLive]}>{label}</Text>
-      </View>
-      {children}
-    </View>
-  );
+// groupByDay strips _date but keeps dateISO ("YYYY-MM-DD"). DayHeader wants ISO
+// with a time component so new Date() parses it consistently — append midday.
+function isoFromGroup(g) {
+  return `${g.dateISO}T12:00:00`;
 }
 
 const styles = StyleSheet.create({
@@ -124,35 +112,12 @@ const styles = StyleSheet.create({
   },
   emptyWrap: { minHeight: 400 },
   pillSlot: {
-    // transparent sticky container; collapses to 0-height when no pill
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
-  section: {
+  errorWrap: { marginTop: space[3] },
+  group: {
     marginTop: space[5],
-  },
-  sectionFirst: {
-    marginTop: space[2],
-  },
-  sectionLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: space[3],
-  },
-  sectionLabel: {
-    ...text.micro,
-    color: colors.text.tertiary,
-    letterSpacing: 0.5,
-  },
-  sectionLabelLive: {
-    color: colors.signal.negative,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.signal.negative,
   },
   cardWrap: {
     marginBottom: space[3],

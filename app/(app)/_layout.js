@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, Bookmark, Activity, Settings as SettingsIcon } from 'lucide-react-native';
+import { Home, Bookmark, Compass, Settings as SettingsIcon } from 'lucide-react-native';
 import { colors, text } from '../../src/theme';
 
 export default function AppLayout() {
@@ -44,10 +44,18 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="discover"
+        options={{
+          title: 'Discover',
+          tabBarIcon: ({ color, size }) => <Compass size={size} color={color} strokeWidth={1.75} />,
+        }}
+      />
+      <Tabs.Screen
         name="events"
         options={{
-          title: 'Events',
-          tabBarIcon: ({ color, size }) => <Activity size={size} color={color} strokeWidth={1.75} />,
+          // events folder retained for the detail route `/events/[event_id]`;
+          // hide it from the tab bar — it's not a destination, only drill-down.
+          href: null,
         }}
       />
       <Tabs.Screen

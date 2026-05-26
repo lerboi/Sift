@@ -6,17 +6,37 @@ If you're an agent reading this for the first time, read [`learnings.md`](learni
 
 ---
 
+## What Sift is (read every tick, do not drift)
+
+Sift is a **mobile earnings intelligence app for self-directed US-equity investors**. It detects new 8-K earnings filings, generates LLM briefings, predicts beat/meet/miss, and pushes structured insights. **Framed as educational research, never investment advice** — this framing is load-bearing for compliance (SEC/FCA publisher's exclusion).
+
+Every UI decision is judged against four anchors:
+
+1. **Educational, not advisory** — never "advice", "recommend", "should buy"; probability colours stay neutral, never green/red. (See `../architecture/compliance.md`.)
+2. **Numbers are the product** — mono font, tabular figures, generous spacing; if a number is unreadable, the design failed.
+3. **Calm over excitement** — Apple Stocks vibe, not Robinhood; no confetti, no pulsing badges, no auto-play sound.
+4. **Mobile only, mobile shape** — web build is a dev convenience (430pt max-width frame); never optimise for desktop.
+
+If a tick's plan conflicts with any anchor above, the anchor wins — adjust the plan, don't bend the anchor.
+
+---
+
 ## FOCUS (optional override)
 
 > If non-empty, the loop should advance THIS thread first, ignoring backlog order. Clear when done.
 
-_(none — polish FOCUS cleared tick 28 after B1–B9 all resolved across Today, Watchlist, Events, Settings, Ticker detail, Event detail stub. Backlog resumes at P3-4.)_
+_(none — Phase R closed tick 54, 2026-05-22. All four user critiques addressed: ticker detail is now one chronological spine, Home anchors on date eyebrows, Home and Watchlist are visually distinct, Events tab replaced by Discover. Backlog resumes at P7-4.)_
 
 ---
 
 ## Loop protocol (per tick)
 
-1. **Read** `learnings.md` (top), `palette.md`, this file's FOCUS line and STATUS section, and the **Bug log** below.
+1. **Read, in order:**
+   - The **"What Sift is"** anchor above. Re-ground every tick — it's two paragraphs, cheap.
+   - `learnings.md` § Design principles + § Apple HIG + the iteration log tail.
+   - `palette.md` (skim — confirm tokens you're about to use exist).
+   - This file's **FOCUS** line, **STATUS** section, and **Bug log** below.
+   - **If FOCUS references a brief or sub-document** (e.g. `redesign-2026-05-22.md`), read it in full before picking. The brief's mockups and decisions override generic intuition; don't reinvent.
 2. **Pick** what to do this tick:
    - **If the Bug log has unresolved entries**, prioritise them (always — visible bugs erode trust in everything else built).
    - Otherwise, if the last 3+ ticks were all forward-build, do a **UI review pass** — see "UI review cadence" below.
@@ -61,19 +81,21 @@ This step is a real tick — write a changelog entry, update STATUS, schedule th
 
 ## STATUS
 
-**Last tick:** tick 44 — P6-4 search shipped. Phase 6 (Events feed) complete.
-**Next:** P7-4 — open the long disclaimer behind the Settings row (the other P7 rows are functional stubs already).
+**Last tick:** tick 77 — P11-8 shipped: tab-scoped event detail routes; canonical `/events/[id]` preserved for deep-links.
+**Next:** **session-pause again.** Only P11-5 (light mode, user-gated) remains. No productive next item without user input.
 **Blockers:** none.
 
 ## Bug log
 
 User-reported and review-found UI issues. Each gets fixed in priority order before the build backlog resumes.
 
-- [ ] **B10** Hero metaRow on ticker detail (sector pill left + sparkline right same row) feels disconnected — two unrelated bits of meta sharing a horizontal line. Defer, subjective; revisit after Watchlist sparkline rows exist for visual consistency.
-- [ ] **B11** UP NEXT card on ticker detail: the prominent "▲ 65%" reads as directional even with neutral colour + qualifier line. Acceptable for v1 but worth A/B-style copy testing later. Defer.
-- [ ] **B13** Watchlist empty-state CTA "Add ticker" is a noop — tap fires haptic but does nothing visible. Real flow lands in P5-6; pre-then, stub a brief toast/sheet so the affordance feels alive.
+- [x] **B10** Hero metaRow disconnect — resolved by **R6** (tick 50): ticker hero was rewritten end-to-end. Symbol → one-line `name · sector` → sparkline+30d row. The disconnected pill-left/sparkline-right composition no longer exists.
+- [x] **B11** UP NEXT "▲ 65%" reads directional — resolved by **R3** (tick 47): `<EventTimelineCard>` upcoming state renders the beat-probability as a labeled metric (`Beat probability  65% ⓘ`) with no triangle. Triangles only appear for realized outcomes in signal colours.
+- [x] **B13** Watchlist empty-state CTA noop — resolved by **P5-6** (tick 42): empty-state CTA wires to `openSheet` → `<AddTickerSheet>`. Verified in current `watchlist-screen.js`.
 - [ ] **B14** Event detail METRICS tiles and ACTUAL vs ESTIMATE compare bars show the same data (EPS + Revenue actual vs estimate) twice. Consider merging — either embed a tiny compare bar inside each MetricTile, or drop the tiles in favour of the bigger compare bars. Defer; both visualisations are individually OK and serve slightly different reading speeds.
-- [ ] **B16** Watchlist sparkline trend tint (`up`→positive, `down`→negative, `flat`→muted) is purely decorative on mock data — a green sparkline implies "AAPL trending up" which we haven't computed. Consider muting all sparklines to `text.secondary` until real 30d-change data lands. Defer.
+- [x] **B17** Discover sector-heat rows had a `→` chevron implying nav but tap fired only haptic — fixed tick 69 (UI review pass). Removed chevron + downgraded Pressable to View since there's no destination. Sector-detail navigation is a real Phase 12+ feature, not a chevron stub.
+- [x] **B18** Settings Email row showed hardcoded `"you@example.com"` — fixed tick 69 (UI review pass). Now reads `session.user.email` via `supabase.auth.getSession()` on mount; falls back to `—` when no session.
+- [x] **B16** Watchlist sparkline trend tint — fixed tick 49 (as part of R5): sparklines now default to `text.secondary`; `trend` prop preserved on the data shape so future real 30d-change data can re-tint with intent.
 
 - [x] **B8** PAST EVENTS placeholder on ticker detail — fixed tick 28: icon + "Coming soon" headline + subhead description of what'll go there. Reads as deliberate, not TODO.
 - [x] **B9** Event detail stub — fixed tick 28: uses `<EmptyState>` (Activity icon, "Event detail coming soon", description listing what's coming). Same shape as Watchlist/Events tab empty states for consistency.
@@ -94,6 +116,25 @@ User-reported and review-found UI issues. Each gets fixed in priority order befo
 ## Backlog
 
 Legend: `[ ]` to do · `[x]` done · `[~]` partially done / has sub-items · `[!]` blocked
+
+### Phase R — Redesign sprint (FOCUS)
+
+Driven by [`redesign-2026-05-22.md`](redesign-2026-05-22.md) — read it before starting any R-tick. Ordering principle: data shape first, then primitives, then screens, then deletions. Do not interleave with later phases until R closes.
+
+- [x] **R1** Data shape + mock refactor — tick 45, 2026-05-22. Shipped `src/lib/dates.js` (`groupByDay`, `formatDayHeader`, `formatEventTime`, `formatMarketAnchor`) + added `expectedAt`/`actualAt` to every event across the four mock files. Existing `when`/`dateLabel`/`date`/`filedAt` strings preserved so consumers compile unchanged. Verified via a Node smoke harness (deleted after use) + clean Metro boot.
+  - [ ] **R1a** (deferred to R6) — add `publishedAt` to ticker `pastBriefings`, `recordedAt` to ticker `transcripts`, when the ticker timeline rewrite needs them.
+  - [ ] **R1b** (deferred to R4) — fix weekend `expectedAt` values in `home/mock.js` and `ticker/mock.js` `pastEvents` (TSLA Sat May 23, AAPL Sat Nov 1, etc.) when consumers migrate off the `when` strings. Cosmetic.
+- [x] **R2** `<DayHeader>` primitive — tick 46, 2026-05-22. `src/components/day-header.js` consumes `formatDayHeader`; elides the duplicated weekday when relative IS the weekday. Verified by forcing a Metro bundle and grepping for the export.
+- [x] **R3** `<EventTimelineCard>` primitive — tick 47, 2026-05-22. `src/components/event-timeline-card.js` ships all three states. Also extended `src/lib/dates.js` with `formatRelativePast` for the live ribbon. Verified by Metro bundle.
+  - [ ] **R3a** (deferred to R4) — Home mocks lack `name`; R4 must provide it (via a shared ticker→name lookup, or by extending home mocks). Decide in R4.
+- [x] **R4** Today screen rewrite — tick 48, 2026-05-22. Home now flows events through `groupByDay` + `<DayHeader>` + `<EventTimelineCard>`. Section labels gone, sticky pill + pull-to-refresh + empty state preserved. Mock collapsed to one flat array with `state` per event; `useHomeData` returns `{events, ...}`. R3a (`getCompanyName` in ticker-catalog) and R1b (MSFT weekend → Mon) closed inline.
+- [x] **R5** Watchlist row + sort selector — tick 49, 2026-05-22. New two-line row layout, muted sparkline (closes B16), `<SortSelector>` primitive backed by `<AppSheet>`. `groupByWeek` retired from the screen (still exported for safety). Three sort modes: date / alpha / recent.
+- [x] **R6** Ticker detail timeline rewrite — tick 50, 2026-05-22. Hero tightened; everything below renders as one `<DayHeader>` + content-card spine via `buildTimeline` + `groupByDay`. `<EventTimelineCard>` gained `hideIdentity` (and a non-tappable badge variant for the briefing-ready row when no handler is wired). R1a closed inline (publishedAt/recordedAt on briefings + transcripts). Methodology sheet + sticky CTA + disclaimer all preserved.
+- [x] **R7** Discover screen — tick 51, 2026-05-22. Search + three rails (model-predicted biggest expected, sector heat, recent biggest surprises). Compliance copy gate cleared (Model prefix + expected qualifier; no forbidden words). Route registered; tab bar swap in R8.
+- [x] **R8** Tab bar swap + Events deletion — tick 52, 2026-05-22. Tab order: Today · Watchlist · Discover · Settings. Events tab `href: null`'d to keep `[event_id]` route reachable. 4 files + 2 orphan components deleted. Detail-only Stack `_layout.js` added so the dynamic route gets a header.
+  - [ ] **R8a** (deferred to R9) — when on `/events/<id>` from Today/ticker, no tab shows as selected. Visual artifact; fix by hosting the detail route under the originating tab.
+- [x] **R9** Cross-screen consistency pass — tick 53, 2026-05-22. Swept all 5 screens. Orphan `'in 2h'`/`'tomorrow'` strings: none. Fixed: removed duplicate date display on ticker detail (BriefingCard + TranscriptCard gained `showDate={false}` opt-out); deleted orphan `past-event-row.js`. Queued to Phase 11: aspirational ⏰/📄/💬 glyphs and R8a (no-selected-tab on `/events/<id>`).
+- [x] **R10** Phase R close-out — tick 54, 2026-05-22. `palette.md` "Component implications" section rewritten as post-Phase-R conventions (DayHeader shape, EventTimelineCard state table, live-ribbon colour decision, outcome arrows, prediction display, briefing-ready badge, sparkline tint). `learnings.md` gained a Phase R summary entry with four durable patterns. FOCUS cleared. Phase R **closed**.
 
 ### Phase 0 — Foundation
 
@@ -178,43 +219,49 @@ These unblock everything. Do them first. Each is small.
 
 ### Phase 7 — Settings
 
-- [ ] **P7-1** Account section — email, sign out (stub)
-- [ ] **P7-2** Notifications — toggles per kind (briefing/event/transcript), quiet hours range picker
-- [ ] **P7-3** About — version, attribution, links to T&Cs and Privacy
-- [ ] **P7-4** Show full disclaimer screen
-- [ ] **P7-5** Subscription placeholder (when RevenueCat lands later)
+- [x] **P7-1** Account section — tick 57, 2026-05-22. Sign-out row now opens a confirmation sheet (destructive friction); destructive Button variant added. Email row stays read-only until Phase 10 auth flow lands.
+- [x] **P7-2** Notifications — tick 56, 2026-05-22. Three Switch toggles (briefings / 8-K / transcripts) + quiet-hours preset sheet (5 options). `<SettingsRow>` extended with a `trailing` prop. Time-picker dep deferred (preset-only for MVP).
+- [x] **P7-3** About — tick 58, 2026-05-22. Privacy + Terms push-screens shipped (`/settings/privacy`, `/settings/terms`) with DRAFT pills and `<LegalSection>` primitive hoisted from the disclaimer screen. Attribution/open-source row deferred to Phase 11.
+  - [ ] **P7-3a** (deferred to Phase 11) — Attribution / Open source row in ABOUT, listing third-party deps + licenses. Best generated from package.json automatically.
+- [x] **P7-4** Show full disclaimer screen — tick 55, 2026-05-22. New route `/settings/disclaimer` with the canonical disclaimer text from `compliance.md` broken into 7 sections. Settings ABOUT row wired. Inline long-disclaimer swapped to short variant (footer rule preserved).
+- [x] **P7-5** Subscription placeholder — tick 59, 2026-05-22. PLAN group with `Plan` value=`Free` row + coming-soon sheet. RevenueCat wires in Phase 12.
 
-### Phase 8 — Learn (deferred, single placeholder)
+### Phase 8 — Learn (OBSOLETE)
 
-- [ ] **P8-1** Placeholder screen with "coming soon" — leaves the tab if we restore it, otherwise harmless
+Phase R replaced the speculative 5th-tab "Learn" idea with Discover (Today / Watchlist / Discover / Settings). There's no Learn tab to populate. If in-app educational content (explainers, model cards) is later desired it should be a fresh phase tied to a real product decision.
+
+- [~] **P8-1** Placeholder screen — obsolete tick 59, 2026-05-22.
 
 ### Phase 9 — Onboarding
 
 Per learnings § onboarding. Mandatory legal ack is non-negotiable.
 
-- [ ] **P9-1** Welcome carousel (3 cards, skippable, value prop)
-- [ ] **P9-2** "How Sift works" — 4 bullets explaining data sources + what predictions are/aren't
-- [ ] **P9-3** **Mandatory** legal acknowledgement — full TOS, scroll-to-enable button, two checkboxes ("I understand Sift is educational" + "I agree to Terms & Privacy")
-- [ ] **P9-4** Notification permissions primer + system prompt
-- [ ] **P9-5** First-ticker setup — suggested watchlist (AAPL/MSFT/NVDA/GOOG/AMZN) with multi-select; skip option
+- [x] **P9-1** Welcome carousel — tick 60, 2026-05-22. New `(onboarding)` route group + headerless Stack; 3-slide horizontal pager with PageDots primitive + Skip + Next/Get-started button. Finish replaces to `/today`; P9-2 will push to `how-sift-works` instead.
+- [x] **P9-2** "How Sift works" — tick 61, 2026-05-22. 4-bullet single-page explainer at `/how-sift-works` (EDGAR / Briefings / Predictions / What Sift isn't). Welcome screen's advance now pushes to it.
+- [x] **P9-3** Mandatory legal ack — tick 62, 2026-05-22. `/ack` screen with Apple Health Studies pattern: scroll-to-enable + 2 checkboxes + gated Continue. New `<Checkbox>` primitive. P10-3 will record `disclaimer_ack_at` server-side at the confirm step.
+- [x] **P9-4** Notification permissions primer + system prompt — tick 63, 2026-05-22. `/notifications` primer screen explaining 3 push kinds + throttling + quiet hours; Allow button fires `Notifications.requestPermissionsAsync()`. Installed `expo-notifications@~0.32.17` (justified — core product mechanism). Plugin registered in `app.json`; native wiring waits for `expo prebuild` in Phase 10.
+- [x] **P9-5** First-ticker setup — tick 64, 2026-05-22. `/first-tickers` multi-select of 5 large-caps; adaptive CTA ("Skip for now" → "Add N tickers"). Notifications screen now pushes here. **Phase 9 complete.**
 
 ### Phase 10 — Auth flow
 
-- [ ] **P10-1** Sign-in / sign-up screens (email/password + Google OAuth)
-- [ ] **P10-2** PKCE deep-link handler in `app/(auth)/auth-callback.js`
-- [ ] **P10-3** Session restore — splash → check session → route to (auth) or (app)
-- [ ] **P10-4** Migrate to encrypted session storage (AES key in SecureStore, ciphertext in AsyncStorage) per [`frontend.md` § session storage](../architecture/frontend.md#session-storage--the-2kb-problem)
+- [x] **P10-1** Sign-in / sign-up screens — tick 65, 2026-05-22. New `(auth)` route group; `/sign-in` + `/sign-up` with Supabase `signInWithPassword` + `signUp` wired; `<TextField>` primitive; email-confirm success screen. Google OAuth stubbed — full wiring in P10-2.
+- [x] **P10-2** PKCE deep-link handler — tick 66, 2026-05-22. `flowType: 'pkce'` on supabase client; real Google OAuth via `signInWithOAuth` + `WebBrowser.openAuthSessionAsync` + `exchangeCodeForSession`. Fallback `/auth-callback` screen for cold-start deep-link delivery.
+- [x] **P10-3** Session restore — tick 67, 2026-05-22. `useAuthRouting()` hook reads session + local ack, routes to `/sign-in` / `/welcome` / `/today`. Splash stays up until decision lands. Real sign-out wired (clears Supabase session + local ack); ack-screen writes the local ack on confirm.
+- [x] **P10-4** Encrypted session storage — tick 68, 2026-05-22. `src/lib/storage.js` AES-GCM adapter (key in `expo-secure-store`, ciphertext in AsyncStorage); wired into supabase client. New deps: `@noble/ciphers` + `expo-crypto`. **Phase 10 complete.**
 
 ### Phase 11 — Polish passes
 
 Run AFTER each preceding phase completes, OR interleave every 2–3 build items.
 
-- [ ] **P11-1** Motion audit — sweep every transition; confirm spring vs timing per learnings § motion
-- [ ] **P11-2** Haptic audit — confirm every tappable surface has correct feedback (tap on cards, select on add/remove, success on submit)
-- [ ] **P11-3** Accessibility audit — VoiceOver labels on every number/signal/status; reduced-motion fallback verified
-- [ ] **P11-4** Empty/error state audit — confirm every list and loadable surface has empty + loading + error
+- [x] **P11-1** Motion audit — tick 73, 2026-05-22. Card + Button press-release switched to `withSpring` (damping 22 / stiffness 180 / mass 1); press-in keeps timing snap; reduced-motion still respected. All other motion surfaces verified-as-correct.
+- [x] **P11-2** Haptic audit — tick 70, 2026-05-22. Audited 50+ call sites; fixed 3 feedback-type mismatches (briefing/transcript expand → select, settings row → tap). Centralized reduce-motion gating in `src/lib/haptics.js` (skip tap+select, keep success/warning/error).
+- [x] **P11-3** Accessibility audit — tick 71, 2026-05-22. Reduced-motion gating added to Card + Button press-scale + briefing/transcript chevron rotations. `<TextField>` gained `accessibilityLabel` + `accessibilityHint`. VoiceOver pronunciation already strong via `<MonoNumber>.speakable()`. Real-device VoiceOver/AX3 verification queued for Phase 12.
+- [x] **P11-4** Empty/error state audit — tick 72, 2026-05-22. Home gained `<InlineError>` consumer; coverage table verified for all 8 loadable surfaces. Static screens noted as n/a; primitive ready for real-data hookups.
 - [ ] **P11-5** Light mode (deferred decision — skip unless user opens it)
-- [ ] **P11-6** Live Activities for earnings countdowns (post-MVP marker — write a stub spec, don't implement)
+- [x] **P11-6** Live Activities stub spec — tick 76, 2026-05-22. `docs/architecture/live-activities.md` covers v1 scope (3 states × 3 surfaces), implementation path (expo-live-activity + prebuild + Swift extension), why not now, trigger conditions for revisiting, and compliance constraints. Indexed in `docs/README.md`.
+- [x] **P11-7** Timeline glyphs — tick 75, 2026-05-22. Clock on upcoming time-anchor, FileText on BriefingCard header, MessageCircle on TranscriptCard header (lucide outlines, not emoji — calm aesthetic).
+- [x] **P11-8** No-selected-tab artifact — tick 77, 2026-05-22. Duplicated `/events/[event_id]` under each consuming tab (`today/`, `watchlist/`, `discover/`); callers updated to push tab-scoped URLs. Canonical `/events/[event_id]` preserved for deep-link entry.
+- [x] **P11-9** Onboarding CTA consistency — tick 74, 2026-05-22. Reversed direction: made first-tickers match welcome/how-sift-works (dual Skip+Continue) instead of the other way around (first-tickers' adaptive pattern was wrong for state-less screens). Hoisted shared topBar to `<OnboardingTopBar>` primitive (rule of three).
 
 ---
 

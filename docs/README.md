@@ -12,11 +12,23 @@ docs/
 ├── architecture/                how the system is put together
 │   ├── overview.md              one-page mental model + diagrams
 │   ├── frontend.md              React Native + Expo Router, auth on device
-│   ├── backend.md               Supabase: schema, RLS, edge functions
+│   ├── backend.md               Supabase: one-page overview (detail in ../backend/)
 │   ├── ml-pipeline.md           backend ML: surprise classifier + LLM briefings
 │   ├── data-sources.md          EDGAR, Finnhub, transcripts, press wires — limits & fallbacks
 │   ├── realtime-and-push.md     "filing hits → device buzzes" latency budget
-│   └── compliance.md            FCA / SEC framing, language conventions, anti-patterns
+│   ├── compliance.md            FCA / SEC framing, language conventions, anti-patterns
+│   └── live-activities.md       post-MVP stub spec: lock-screen + Dynamic Island
+├── backend/                     backend working detail — read for Phase 12 build
+│   ├── README.md                folder map + naming conventions
+│   ├── conventions.md           Supabase + Postgres best practices
+│   ├── schema.md                every table, column, constraint, index
+│   ├── rls-policies.md          every row-level-security policy
+│   ├── triggers-and-functions.md  DB triggers + edge functions
+│   ├── realtime.md              channel patterns
+│   ├── views-and-rpcs.md        derived data (Home feed, Discover rails, ticker detail)
+│   ├── migrations.md            ordered migration plan + setup
+│   ├── frontend-wiring.md       surface-by-surface query map
+│   └── iteration-plan.md        per-tick build sequence (loop contract)
 ├── decisions/                   architecture decision records (ADRs)
 │   ├── 0001-expo-managed-with-dev-client.md
 │   ├── 0002-supabase-backend.md
@@ -42,17 +54,20 @@ docs/
 - **Wondering why we chose X over Y?** Check `decisions/` — short ADRs documenting the call and what would invalidate it.
 - **Stuck on what to do next?** [`open-questions.md`](open-questions.md) lists what's unresolved.
 
-## Status (as of 2026-05-11)
+## Status (as of 2026-05-25)
 
 | Area | Status |
 | --- | --- |
 | Mobile shell scaffolded (Expo + expo-router + Supabase client) | ✅ done |
-| Auth (sign in / sign up / session persistence) | ⏳ next |
-| Supabase schema (users, watchlists, briefings, events) | 📝 designed in `backend.md`, not migrated yet |
-| Modal workers (EDGAR poller, briefings, classifier) | ⏳ not started |
-| Push notifications via Expo Push | ⏳ not started |
-| Compliance copy / disclaimers | 📝 patterns documented, not in UI yet |
-| RevenueCat | 🅿️ parked until post-MVP |
+| UI / UX iteration loop (Phase R + Phases 0–10) | ✅ shipped over 77 ticks; see `design/changelog.md` |
+| Auth — client-side (sign in / sign up / Google OAuth PKCE / encrypted session storage) | ✅ shipped (Phase 10, ticks 65–68) |
+| Compliance copy / disclaimers / ack flow | ✅ shipped in onboarding (P9-3) + Settings disclaimer screen (P7-4) |
+| Backend plan documented | ✅ in `backend/` — 9 detailed docs ready for Phase 12 loop |
+| Supabase schema (migrations applied) | ⏳ next — Phase 12 (B1–B15 in `backend/iteration-plan.md`) |
+| Supabase dashboard config (providers, redirect URLs, runtime params) | ⏳ user action — see `backend/iteration-plan.md` § Pre-loop checklist |
+| Modal workers (EDGAR poller, briefings, classifier) | ⏳ Phase 13 (M1–M9) — after Phase 12 |
+| Push notifications via Expo Push | ⏳ Phase 12 (B10 + B12) |
+| RevenueCat / subscriptions | 🅿️ parked until post-MVP |
 
 Update this table when you ship something — it's the single fastest indicator of where the project is.
 

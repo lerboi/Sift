@@ -282,23 +282,68 @@ export const motion = {
 
 `src/theme/use-theme.js` will export a hook returning this object — keep it static for now, leave room for a light theme later (don't build it; remember it).
 
-## Component implications (preview)
+## Component implications — current (post-Phase R, 2026-05-22)
 
-The home screen rendering of the chosen direction translates as:
+### Timeline IA
+
+Today, Discover, ticker detail and event detail are all day-anchored timelines. The structural device is `<DayHeader>` over a flat list of cards; no more bucket section labels like `LIVE NOW` / `UPCOMING` / `RECENT` / `PAST EVENTS`. Date is the primary anchor, content is secondary.
+
+### `<DayHeader>` shape
 
 | Element | Token |
 | --- | --- |
-| Screen background | `bg.base` |
-| Header row | text `text.title`, ticker pill (`⚡ 3 new`) is `accent.muted` bg + `accent.default` text |
-| Section label "TODAY" | `text.micro`, `text.tertiary`, letter-spacing +0.5 |
-| Earnings card | `bg.surface` + `border.subtle` + `radius.lg` + padding `space.4` |
-| Ticker (`AAPL`) | `text.bodyMono` weight 600 |
-| Period (`Q1 26`) | `text.bodySm`, `text.secondary` |
-| Time (`in 2h`) | `text.bodySm`, `text.tertiary` |
-| EPS line | mono numbers `text.bodyMono`, label `text.bodySm` `text.secondary` |
-| `▲ 65%` | `signal.positive` triangle + `text.primary` percent |
-| "pre-earnings briefing ready" | `text.caption` `accent.default` |
-| Footer disclaimer | `text.caption` `text.tertiary` |
+| Container | row, `alignItems: baseline`, `gap: space[2]`, `marginBottom: space[3]` |
+| Relative label (`TODAY` / `YESTERDAY` / `TOMORROW` / `WED`) | `text.micro`, `text.tertiary`, `letterSpacing: 0.6` |
+| Dot separator (`·`) | `text.micro`, `text.tertiary` |
+| Absolute (`MAY 26` or `WED MAY 27`) | `text.subhead`, `text.tertiary` |
+
+When the relative label IS the weekday (`WED`), the weekday is elided from the right side. When the relative is `TODAY/YESTERDAY/TOMORROW`, the weekday joins the absolute side for context.
+
+### Event card states (`<EventTimelineCard>`)
+
+One component, three states. All wrap `<Card>` (`bg.surface` + `border.subtle` + `radius.lg`).
+
+| State | Header | Body | CTA |
+| --- | --- | --- | --- |
+| `upcoming` | Time anchor: `4:00 PM ET · After close` (`text.subhead` secondary, anchor in tertiary) | EPS est + Beat probability % with `ⓘ` info button | "● Briefing ready →" (`accent.default`) when handler + briefingReady |
+| `live` | `◐ LIVE · filed Nm ago` — **`accent.default`** (NOT `signal.negative` — see below) | EPS actual vs est + signal-tinted surprise % + qualifier | "Read briefing →" |
+| `past` | `✓ Reported · time` — `text.tertiary` | Same as live | "Open event detail →" + optional `<Pill>` for guidance |
+
+### Live ribbon colour decision
+
+The pre-Phase-R `<EventCard>` used `signal.negative` (red) for the LIVE label. That conflated two semantically different things: "live event happening now" and "negative P&L outcome." Red is the P&L colour and only ever means "down/miss." Post-Phase R: **live state uses `accent.default`**, the same accent used for active tabs and primary CTAs. Pairs with the `◐` glyph (filled half-circle) for unmistakable identity.
+
+### Outcome arrows
+
+Used identically across `<EventTimelineCard>` (past + live), `<DiscoverScreen>` recent-surprises rail, event detail hero + metric tiles.
+
+| Outcome | Arrow | Color |
+| --- | --- | --- |
+| Beat (`surprisePct > 0.005`) | `▲` | `signal.positive` |
+| Miss (`surprisePct < -0.005`) | `▼` | `signal.negative` |
+| In line | `━` | `signal.neutral` |
+
+### Prediction display — compliance-mandatory
+
+| Element | Treatment |
+| --- | --- |
+| Beat probability % (watchlist context) | Mono number, `text.primary` (never green/red), paired with `ⓘ` info button opening the methodology sheet |
+| Beat probability % (cross-market — Discover) | Same neutral colour + "Model" prefix on the label ("Model beat 71% · ±5.2% expected"). The "MODEL —" eyebrow on the section header reinforces. |
+| Forbidden in any user-facing copy | "advice", "recommend", "should", "likely", "will rise", "will move", "buy now", "sell now" |
+| Always-present footer | `<DisclaimerFooter>` + on Discover an extra "Model predictions are educational. Sift does not provide investment advice." line above it |
+
+### Briefing-ready badge
+
+Two variants of the same indicator on upcoming cards:
+
+| Variant | When | Render |
+| --- | --- | --- |
+| Tappable CTA | `onBriefingPress` handler provided (e.g. Home) | `<Pressable>` with `● Briefing ready` + spacer + `→` arrow |
+| Informational badge | No handler (e.g. ticker detail — no briefing-detail route yet) | `<View>` with `● Briefing ready` only (no arrow, non-tappable) |
+
+### Sparkline tint
+
+Default: `text.secondary` (muted). The trend-coloured variant was retired in tick 49 (B16) because mock data doesn't carry real 30-day direction. Real-data ticks may re-tint with intent later — `trend` prop is preserved on the row data shape.
 
 ## What this doc deliberately does NOT cover
 
