@@ -6,10 +6,15 @@ import { MonoNumber } from './mono-number';
 import { colors, space, text } from '../theme';
 import { formatEventTime, formatMarketAnchor, formatRelativePast } from '../lib/dates';
 
-function fmtEPS(n) { return `$${n.toFixed(2)}`; }
+function fmtEPS(n) { return n == null || !Number.isFinite(n) ? '—' : `$${n.toFixed(2)}`; }
 function fmtSurprise(p) {
+  if (p == null || !Number.isFinite(p)) return '—';
   const sign = p >= 0 ? '+' : '';
   return `${sign}${(p * 100).toFixed(1)}%`;
+}
+function fmtBeatProb(p) {
+  if (p == null || !Number.isFinite(p)) return '—';
+  return `${Math.round(p * 100)}%`;
 }
 function classify(p) {
   if (p > 0.005) return 'beat';
@@ -100,6 +105,7 @@ function PastHeader({ actualAt }) {
 }
 
 function UpcomingBody({ epsEst, beatProb, onInfoPress }) {
+  const beatDisplay = fmtBeatProb(beatProb);
   return (
     <View>
       <View style={styles.metricLine}>
@@ -111,10 +117,10 @@ function UpcomingBody({ epsEst, beatProb, onInfoPress }) {
         <Text style={styles.label}>Beat probability</Text>
         <View style={styles.spacer} />
         <MonoNumber
-          value={`${Math.round(beatProb * 100)}%`}
+          value={beatDisplay}
           size="headline"
           color={colors.text.primary}
-          accessibilityLabel={`${Math.round(beatProb * 100)} percent predicted beat probability`}
+          accessibilityLabel={beatProb != null ? `${Math.round(beatProb * 100)} percent predicted beat probability` : 'beat probability unavailable'}
         />
         {onInfoPress ? (
           <Pressable
@@ -223,7 +229,7 @@ function ctaFor({ state, briefingReady, onBriefingPress, onOpenDetail }) {
 }
 
 function a11y({ state, ticker, name, period, epsActual, epsEst, surprisePct, beatProb }) {
-  const base = `${ticker}${name ? `, ${name}` : ''}, ${period}`;
+  const base = `${ticker ?? ''}${name ? `, ${name}` : ''}${period ? `, ${period}` : ''}`;
   if (state === 'upcoming') {
     return `${base}, earnings expected, EPS estimate ${fmtEPS(epsEst)}${beatProb != null ? `, predicted beat probability ${Math.round(beatProb * 100)} percent` : ''}`;
   }

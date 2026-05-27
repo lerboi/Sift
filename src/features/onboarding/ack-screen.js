@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/button';
 import { Checkbox } from '../../components/checkbox';
 import { LegalSection } from '../../components/legal-section';
 import { haptics } from '../../lib/haptics';
-import { ACK_KEY } from '../../lib/use-auth-routing';
+import { supabase } from '../../../lib/supabase';
 import { colors, space, text } from '../../theme';
 
 // scroll-to-enable threshold — content within this many pt of the bottom
@@ -20,8 +19,9 @@ export default function AckScreen() {
   const [scrolled, setScrolled] = useState(false);
   const [educationalAck, setEducationalAck] = useState(false);
   const [termsAck, setTermsAck] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const canContinue = scrolled && educationalAck && termsAck;
+  const canContinue = scrolled && educationalAck && termsAck && !submitting;
 
   const onScroll = (e) => {
     if (scrolled) return;
@@ -31,12 +31,24 @@ export default function AckScreen() {
     }
   };
 
-  // local ack — moves to profiles.disclaimer_ack_at when the schema lands.
   const confirm = async () => {
     if (!canContinue) return;
+    setSubmitting(true);
     haptics.success();
-    await AsyncStorage.setItem(ACK_KEY, new Date().toISOString());
-    router.push('/notifications');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const uid = sessionData?.session?.user?.id;
+      if (uid) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ disclaimer_ack_at: new Date().toISOString() })
+          .eq('id', uid);
+        if (error && __DEV__) console.warn('[ack-screen] ack update failed', error.message);
+      }
+      router.push('/notifications');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -129,6 +141,7 @@ export default function AckScreen() {
           onPress={confirm}
           fullWidth
           disabled={!canContinue}
+          loading={submitting}
           accessibilityLabel="Continue to Sift"
         >
           Continue

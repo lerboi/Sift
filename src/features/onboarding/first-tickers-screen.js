@@ -8,6 +8,7 @@ import { Card } from '../../components/card';
 import { OnboardingTopBar } from './onboarding-top-bar';
 import { haptics } from '../../lib/haptics';
 import { getCompanyName } from '../watchlist/ticker-catalog';
+import { supabase } from '../../../lib/supabase';
 import { colors, space, text } from '../../theme';
 
 // suggested seed list per p9-5 spec; users can edit on watchlist afterward.
@@ -20,6 +21,7 @@ export default function FirstTickersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState(new Set());
+  const [submitting, setSubmitting] = useState(false);
 
   const toggle = (symbol) => {
     haptics.select();
@@ -31,15 +33,58 @@ export default function FirstTickersScreen() {
     });
   };
 
-  // p10-3 will write the seed selections to profiles.watchlist server-side.
+  // persistTickers=false on skip — user explicitly chose to exit without adding.
+  const persistAndExit = async ({ persistTickers }) => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const uid = sessionData?.session?.user?.id;
+      if (!uid) {
+        router.replace('/today');
+        return;
+      }
+
+      if (persistTickers && selected.size > 0) {
+        const { data: wl } = await supabase
+          .from('watchlists')
+          .select('id')
+          .eq('user_id', uid)
+          .eq('is_default', true)
+          .maybeSingle();
+
+        const watchlistId = wl?.id;
+        if (watchlistId) {
+          const rows = Array.from(selected).map((sym) => ({
+            watchlist_id: watchlistId,
+            ticker_symbol: sym,
+          }));
+          const { error } = await supabase
+            .from('watchlist_tickers')
+            .upsert(rows, { onConflict: 'watchlist_id,ticker_symbol' });
+          if (error && __DEV__) console.warn('[first-tickers] seed failed', error.message);
+        }
+      }
+
+      await supabase
+        .from('profiles')
+        .update({ onboarded_at: new Date().toISOString() })
+        .eq('id', uid);
+
+      router.replace('/today');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const finish = () => {
     if (selected.size > 0) haptics.success();
     else haptics.tap();
-    router.replace('/today');
+    persistAndExit({ persistTickers: true });
   };
   const skip = () => {
     haptics.tap();
-    router.replace('/today');
+    persistAndExit({ persistTickers: false });
   };
 
   const ctaLabel = selected.size === 0
@@ -99,6 +144,8 @@ export default function FirstTickersScreen() {
           variant="primary"
           onPress={finish}
           fullWidth
+          loading={submitting}
+          disabled={submitting}
           accessibilityLabel={ctaLabel}
         >
           {ctaLabel}

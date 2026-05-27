@@ -26,8 +26,9 @@ export default function HomeScreen() {
   const groups = useMemo(() => groupByDay(events), [events]);
 
   const openTicker = (ticker) => router.push(`/watchlist/${ticker}`);
-  // tab-scoped so Today stays highlighted on drill (p11-8)
-  const openEvent = (ticker) => router.push(`/today/events/${ticker}`);
+  // tab-scoped so Today stays highlighted on drill (p11-8). referenceId is
+  // the event uuid for past/live; for upcoming we route by ticker instead.
+  const openEventById = (eventId) => router.push(`/today/events/${eventId}`);
 
   const isEmpty = !loading && events.length === 0;
   const showPill = !loading && !isEmpty && pending.length > 0;
@@ -73,13 +74,20 @@ export default function HomeScreen() {
             <View key={g.dateISO} style={styles.group}>
               <DayHeader iso={isoFromGroup(g)} />
               {g.items.map((e) => {
-                const primary = () => (e.state === 'upcoming' ? openTicker(e.ticker) : openEvent(e.ticker));
+                const primary = () =>
+                  e.state === 'upcoming'
+                    ? openTicker(e.ticker)
+                    : e.referenceId
+                      ? openEventById(e.referenceId)
+                      : openTicker(e.ticker);
+                const openDetail = () =>
+                  e.referenceId ? openEventById(e.referenceId) : openTicker(e.ticker);
                 return (
-                  <View key={`${e.ticker}-${e.period}`} style={styles.cardWrap}>
+                  <View key={`${e.ticker}-${e.period}-${e.referenceId ?? 'u'}`} style={styles.cardWrap}>
                     <EventTimelineCard
                       {...e}
                       onPress={primary}
-                      onOpenDetail={() => openEvent(e.ticker)}
+                      onOpenDetail={openDetail}
                       onBriefingPress={primary}
                     />
                   </View>

@@ -240,11 +240,13 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  -- hosted supabase: vault-backed lookup. self-hosted alternative uses
+  -- current_setting('app.foo'); see § "Setting runtime parameters" below.
   PERFORM net.http_post(
-    url     := current_setting('app.supabase_functions_url') || '/notify_user_event',
+    url     := public.app_config_secret('supabase_functions_url') || '/notify_user_event',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || current_setting('app.service_role_key')
+      'Authorization', 'Bearer ' || public.app_config_secret('service_role_key')
     ),
     body    := p_payload,
     timeout_milliseconds := 5000
@@ -299,7 +301,7 @@ CREATE TRIGGER events_after_change_notify
 **Why fire on `parsed`, not on `pending` insert:**
 The frontend doesn't show `pending` events (RLS filters them out). Push fan-out should match — wait until the parsed data is queryable, then notify. If the parser updates the row from `pending` → `parsed`, the AFTER UPDATE trigger catches that transition.
 
-**`current_setting('app.supabase_functions_url')` etc.:** these are runtime parameters set during DB initialisation via `ALTER DATABASE postgres SET app.supabase_functions_url = '...'`. Keeps the URL out of the function body so prod/staging can differ without code changes.
+**`public.app_config_secret(...)`:** hosted Supabase doesn't permit `ALTER DATABASE ... SET app.*`, so we wrap `vault.decrypted_secrets` in a SECURITY DEFINER helper. See § "Setting runtime parameters" below for the rationale and the migration that installs it (`003_app_config_secret.sql`).
 
 ---
 
@@ -467,12 +469,54 @@ Deletes `push_tokens` with `last_seen_at < now() - interval '30 days'`. Cheap ma
 
 ## Setting runtime parameters
 
-The fan-out trigger needs `app.supabase_functions_url` and `app.service_role_key`. Set once per environment:
+The fan-out trigger needs the edge-function base URL and the service role key. Two paths depending on where the database is hosted.
+
+### Hosted Supabase (what Sift uses) — Vault
+
+Hosted Supabase denies `ALTER DATABASE ... SET app.*` (42501 permission denied — only superuser can set custom GUCs, and managed-tier roles aren't superuser). Use **Supabase Vault** instead:
 
 ```sql
--- Run in the Supabase SQL editor for each env
+-- run once per environment in the SQL editor
+select vault.create_secret(
+  'https://<project-ref>.functions.supabase.co',
+  'supabase_functions_url',
+  'base URL for invoking edge functions from triggers'
+);
+
+select vault.create_secret(
+  '<sb_secret_...>',
+  'service_role_key',
+  'service_role key for trigger->edge-function auth'
+);
+```
+
+Triggers read via the `public.app_config_secret(name text)` helper installed by migration `003_app_config_secret.sql`. That wrapper is `SECURITY DEFINER` (so it can see `vault.decrypted_secrets`) and revoked from `anon` / `authenticated` (so PostgREST can't expose it).
+
+Inside trigger bodies, the canonical pattern is:
+
+```sql
+perform net.http_post(
+  url     := public.app_config_secret('supabase_functions_url') || '/notify_user_event',
+  headers := jsonb_build_object(
+    'Content-Type', 'application/json',
+    'Authorization', 'Bearer ' || public.app_config_secret('service_role_key')
+  ),
+  body    := p_payload,
+  timeout_milliseconds := 5000
+);
+```
+
+Vault keeps the key encrypted at rest, and rotating it is one `vault.create_secret` (or `vault.update_secret`) call — no migration required.
+
+### Self-hosted Postgres — `ALTER DATABASE` (legacy reference)
+
+When running against self-hosted Postgres (not hosted Supabase), the GUC pattern works:
+
+```sql
 ALTER DATABASE postgres SET app.supabase_functions_url = 'https://<project-ref>.functions.supabase.co';
 ALTER DATABASE postgres SET app.service_role_key = '<sb_secret_...>';
 ```
 
-These are read by `current_setting()` at trigger time. Keep them in env-specific migrations or set them as part of the per-environment bootstrap, not in code-committed migrations (the service role key must never end up in git).
+Triggers then read via `current_setting('app.supabase_functions_url')` and `current_setting('app.service_role_key')`. Don't commit a migration that sets these literally — the service role key must not end up in git.
+
+**Sift runs on hosted Supabase**, so the GUC path is documented only as the alternative pattern. All trigger code in this repo uses `app_config_secret` (Vault).

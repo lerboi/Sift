@@ -3,15 +3,26 @@ import { ChevronRight } from 'lucide-react-native';
 import { Sparkline } from '../../components/sparkline';
 import { colors, space, text } from '../../theme';
 import { haptics } from '../../lib/haptics';
+import { useSparkline } from './use-sparkline';
 
 // sparkline muted by default (b16) — trend prop preserved on the data shape
 // for when real 30d-change data lands and we can re-tint with intent.
 export function WatchlistRow({ symbol, name, nextEarnings, sparkline, briefingReady, onPress, last = false }) {
+  const liveSpark = useSparkline(symbol);
+  const series = sparkline && sparkline.length > 2 ? sparkline : liveSpark;
+  // shape() uses 9999 as the "no upcoming briefing" sentinel so date-sort works
+  // — render as em-dash so the user doesn't see "9999d" or "Q? 26".
+  const hasNext = nextEarnings.daysAway < 9999;
+  const periodText = hasNext ? nextEarnings.period : '—';
+  const countdownText = hasNext ? `${nextEarnings.daysAway}d` : '—';
+  const a11yWhen = hasNext
+    ? `reports ${nextEarnings.date}, in ${nextEarnings.daysAway} days`
+    : 'no upcoming earnings scheduled';
   return (
     <Pressable
       onPress={() => { haptics.tap(); onPress?.(); }}
       accessibilityRole="button"
-      accessibilityLabel={`${symbol}, ${name}, reports ${nextEarnings.date}, in ${nextEarnings.daysAway} days${briefingReady ? ', briefing ready' : ''}`}
+      accessibilityLabel={`${symbol}, ${name}, ${a11yWhen}${briefingReady ? ', briefing ready' : ''}`}
       style={({ pressed }) => [
         styles.row,
         !last && styles.divider,
@@ -22,11 +33,11 @@ export function WatchlistRow({ symbol, name, nextEarnings, sparkline, briefingRe
         <View style={styles.topLine}>
           <Text style={styles.symbol} accessibilityLabel={symbol.split('').join(' ')}>{symbol}</Text>
           <View style={styles.sparkSlot}>
-            <Sparkline data={sparkline} width={72} height={20} color={colors.text.secondary} strokeWidth={1.5} />
+            <Sparkline data={series} width={72} height={20} color={colors.text.secondary} strokeWidth={1.5} />
           </View>
           <View style={styles.right}>
-            <Text style={styles.period}>{nextEarnings.period}</Text>
-            <Text style={styles.countdown}>{nextEarnings.daysAway}d</Text>
+            <Text style={styles.period}>{periodText}</Text>
+            <Text style={styles.countdown}>{countdownText}</Text>
           </View>
         </View>
         <View style={styles.subLine}>

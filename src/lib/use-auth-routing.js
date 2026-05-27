@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
-
-// device-local ack flag. moves to profiles.disclaimer_ack_at on a real backend
-// table later. read by useAuthRouting; written by the ack screen on confirm.
-export const ACK_KEY = 'sift.disclaimer_ack_at';
 
 // status: 'loading' | 'unauthed' | 'unonboarded' | 'authed'
 export function useAuthRouting() {
@@ -14,16 +9,36 @@ export function useAuthRouting() {
 
   useEffect(() => {
     let cancelled = false;
+
     async function check() {
-      const [{ data }, ack] = await Promise.all([
-        supabase.auth.getSession(),
-        AsyncStorage.getItem(ACK_KEY),
-      ]);
+      const { data: sessionData } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (!data?.session) setStatus('unauthed');
-      else if (!ack) setStatus('unonboarded');
+
+      const session = sessionData?.session;
+      if (!session) {
+        setStatus('unauthed');
+        return;
+      }
+
+      // safe fallback: profiles table may not exist yet (pre-migration apply).
+      // treating that as 'unonboarded' routes to /welcome which is the harmless path.
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('disclaimer_ack_at')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+
+      if (error) {
+        if (__DEV__) console.warn('[useAuthRouting] profile fetch failed', error.message);
+        setStatus('unonboarded');
+        return;
+      }
+
+      if (!data?.disclaimer_ack_at) setStatus('unonboarded');
       else setStatus('authed');
     }
+
     check();
     const { data: sub } = supabase.auth.onAuthStateChange(() => check());
     return () => {

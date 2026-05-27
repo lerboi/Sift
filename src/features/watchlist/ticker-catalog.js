@@ -1,5 +1,9 @@
-// mock searchable ticker list — replace with supabase `tickers` table query
-export const TICKER_CATALOG = [
+import { supabase } from '../../../lib/supabase';
+
+// fallback list mirrors migration 004's bootstrap seed. used when supabase
+// isn't reachable (offline, pre-migration apply) so the app still renders
+// names and basic search.
+const FALLBACK = [
   { symbol: 'AAPL', name: 'Apple Inc.' },
   { symbol: 'MSFT', name: 'Microsoft Corporation' },
   { symbol: 'NVDA', name: 'NVIDIA Corporation' },
@@ -22,17 +26,52 @@ export const TICKER_CATALOG = [
   { symbol: 'V',    name: 'Visa Inc.' },
 ];
 
+// module-level cache; populated by searchTickers and prefetchCompanyNames.
+const nameCache = new Map(FALLBACK.map((t) => [t.symbol, t.name]));
+
 export function getCompanyName(symbol) {
   const s = String(symbol).toUpperCase();
-  return TICKER_CATALOG.find((t) => t.symbol === s)?.name ?? `${s} Corp.`;
+  return nameCache.get(s) ?? `${s} Corp.`;
 }
 
-export function searchCatalog(query, excludeSymbols = []) {
-  const q = query.trim().toUpperCase();
+export async function searchTickers(query, excludeSymbols = [], limit = 12) {
+  const trimmed = String(query || '').trim();
   const exclude = new Set(excludeSymbols);
-  return TICKER_CATALOG.filter((t) => {
-    if (exclude.has(t.symbol)) return false;
-    if (q === '') return true;
-    return t.symbol.startsWith(q) || t.name.toUpperCase().includes(q);
-  }).slice(0, 12);
+
+  if (!trimmed) {
+    return FALLBACK.filter((t) => !exclude.has(t.symbol)).slice(0, limit);
+  }
+
+  const upper = trimmed.toUpperCase();
+  const { data, error } = await supabase
+    .from('tickers')
+    .select('symbol, name')
+    .or(`symbol.ilike.${upper}%,name.ilike.%${trimmed}%`)
+    .eq('is_active', true)
+    .limit(limit + excludeSymbols.length);
+
+  if (error || !data) {
+    if (error && __DEV__) console.warn('[ticker-catalog] supabase search failed, falling back', error.message);
+    return FALLBACK.filter((t) => {
+      if (exclude.has(t.symbol)) return false;
+      return t.symbol.startsWith(upper) || t.name.toUpperCase().includes(upper);
+    }).slice(0, limit);
+  }
+
+  for (const t of data) nameCache.set(t.symbol, t.name);
+  return data.filter((t) => !exclude.has(t.symbol)).slice(0, limit);
+}
+
+export async function prefetchCompanyNames(symbols) {
+  if (!Array.isArray(symbols) || symbols.length === 0) return;
+  const wanted = symbols
+    .map((s) => String(s).toUpperCase())
+    .filter((s) => !nameCache.has(s));
+  if (wanted.length === 0) return;
+  const { data, error } = await supabase
+    .from('tickers')
+    .select('symbol, name')
+    .in('symbol', wanted);
+  if (error || !data) return;
+  for (const t of data) nameCache.set(t.symbol, t.name);
 }

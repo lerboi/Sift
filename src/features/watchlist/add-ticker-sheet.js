@@ -1,19 +1,32 @@
-import { forwardRef, useMemo, useState } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import BottomSheet, { BottomSheetView, BottomSheetTextInput, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { Search } from 'lucide-react-native';
 import { colors, space, radius, text } from '../../theme';
 import { haptics } from '../../lib/haptics';
-import { searchCatalog } from './ticker-catalog';
+import { searchTickers } from './ticker-catalog';
 
 const SNAP = ['75%'];
+const DEBOUNCE_MS = 120;
 
 export const AddTickerSheet = forwardRef(function AddTickerSheet(
   { onAdd, excludeSymbols = [] },
   ref,
 ) {
   const [query, setQuery] = useState('');
-  const results = useMemo(() => searchCatalog(query, excludeSymbols), [query, excludeSymbols]);
+  const [results, setResults] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const data = await searchTickers(query, excludeSymbols, 12);
+      if (!cancelled) setResults(data);
+    }, DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [query, excludeSymbols]);
 
   const handleAdd = (symbol) => {
     haptics.success();

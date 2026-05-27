@@ -90,14 +90,39 @@ supabase/
 
 ## Per-environment setup (run manually, not as a migration)
 
-Two settings must be applied to each environment AFTER `supabase db push` but BEFORE triggers fire:
+Two values must be available to triggers before fan-out fires: the edge-function base URL and the service role key. Path depends on where Postgres is hosted.
+
+### Hosted Supabase (Sift's path) — Vault
+
+```sql
+-- run once per environment in the SQL editor
+select vault.create_secret(
+  'https://<project-ref>.functions.supabase.co',
+  'supabase_functions_url',
+  'base URL for invoking edge functions from triggers'
+);
+
+select vault.create_secret(
+  '<sb_secret_...>',
+  'service_role_key',
+  'service_role key for trigger->edge-function auth'
+);
+```
+
+Triggers read these via `public.app_config_secret(name)` — installed by migration `003_app_config_secret.sql`. See `triggers-and-functions.md` § "Setting runtime parameters" for the SECURITY DEFINER wrapper and why it exists.
+
+### Self-hosted Postgres — `ALTER DATABASE`
+
+If you ever fork Sift to a self-hosted Postgres deployment, `ALTER DATABASE` works:
 
 ```sql
 ALTER DATABASE postgres SET app.supabase_functions_url = 'https://<project-ref>.functions.supabase.co';
 ALTER DATABASE postgres SET app.service_role_key      = '<sb_secret_...>';
 ```
 
-These aren't migrations because (a) the values differ per env, (b) the service role key must never live in a git-committed file. Document them in `supabase/README.md` (to be written during the build).
+This pattern is **denied on hosted Supabase** (42501 permission denied) — superuser-only on managed tier. Documented here for completeness only.
+
+In either path, the values aren't migrations because (a) they differ per env, (b) the service role key must never live in a git-committed file.
 
 ## Seeding `tickers`
 

@@ -3,6 +3,8 @@ import { Stack } from 'expo-router';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
   Inter_400Regular,
@@ -16,6 +18,9 @@ import {
 import { colors } from '../src/theme';
 import { WebFrame } from '../src/components/web-frame';
 import { useAuthRouting } from '../src/lib/use-auth-routing';
+import { useUserId } from '../src/lib/use-user-id';
+import { registerPushTokenIfPossible } from '../src/lib/push-tokens';
+import { useNotificationsStream } from '../src/lib/realtime/use-notifications-stream';
 
 // override react-navigation default light theme — otherwise navigators paint white above transparent headers
 const SiftNavTheme = {
@@ -43,25 +48,42 @@ export default function RootLayout() {
   });
 
   const authStatus = useAuthRouting();
+  const userId = useUserId();
   const ready = fontsLoaded && authStatus !== 'loading';
+
+  // notifications realtime: broadcasts to the notifications bus when a new row
+  // lands. consumed by useHomeData for the new-events pill (and any future
+  // toast / inbox surface).
+  useNotificationsStream(authStatus === 'authed' ? userId : null);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
 
+  // re-register the device push token on every cold start once we're authed.
+  // upsert keeps last_seen_at fresh so gc_stale_push_tokens (B13) doesn't reap
+  // an active device.
+  useEffect(() => {
+    if (authStatus === 'authed') registerPushTokenIfPossible();
+  }, [authStatus]);
+
   if (!ready) return null;
 
   return (
-    <ThemeProvider value={SiftNavTheme}>
-      <WebFrame>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.bg.base },
-          }}
-        />
-      </WebFrame>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider value={SiftNavTheme}>
+          <WebFrame>
+            <StatusBar style="light" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg.base },
+              }}
+            />
+          </WebFrame>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

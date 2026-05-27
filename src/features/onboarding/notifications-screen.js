@@ -6,6 +6,7 @@ import * as Notifications from 'expo-notifications';
 import { Bell, BellOff, Clock } from 'lucide-react-native';
 import { Button } from '../../components/button';
 import { haptics } from '../../lib/haptics';
+import { registerPushTokenIfPossible } from '../../lib/push-tokens';
 import { colors, space, text } from '../../theme';
 
 const POINTS = [
@@ -37,8 +38,12 @@ export default function NotificationsScreen() {
     setRequesting(true);
     try {
       const { status } = await Notifications.requestPermissionsAsync();
-      if (status === 'granted') haptics.success();
-      else haptics.tap();
+      if (status === 'granted') {
+        haptics.success();
+        await registerPushTokenIfPossible();
+      } else {
+        haptics.tap();
+      }
     } catch {
       // expo go has reduced notification support since sdk 53; gracefully no-op
       haptics.tap();

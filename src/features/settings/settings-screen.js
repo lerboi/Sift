@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { ScrollView, Switch, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { User, Bell, Clock, Info, FileText, LogOut, Sparkles } from 'lucide-react-native';
 import { SettingsGroup } from '../../components/settings-group';
 import { SettingsRow } from '../../components/settings-row';
 import { DisclaimerFooter } from '../../components/disclaimer-footer';
 import { haptics } from '../../lib/haptics';
 import { colors, space } from '../../theme';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../../lib/supabase';
-import { ACK_KEY } from '../../lib/use-auth-routing';
 import { QuietHoursSheet, presetLabel } from './quiet-hours-sheet';
 import { SignOutSheet } from './sign-out-sheet';
 import { SubscriptionSheet } from './subscription-sheet';
+
+const APP_VERSION = Constants?.expoConfig?.version || '0.1.0';
 
 const icon = (Icon) => <Icon size={18} color={colors.text.secondary} strokeWidth={1.75} />;
 
@@ -23,27 +24,62 @@ export default function SettingsScreen() {
   const subscriptionSheet = useRef(null);
 
   const [email, setEmail] = useState('');
-  useEffect(() => {
-    let cancelled = false;
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      setEmail(data?.session?.user?.email ?? '');
-    });
-    return () => { cancelled = true; };
-  }, []);
+  const [tier, setTier] = useState('free');
+  const [userId, setUserId] = useState(null);
 
-  // mock notification prefs — wire to supabase profile when schema lands
+  // notification prefs sourced from profiles row; written back optimistically on toggle.
   const [briefings,  setBriefings]  = useState(true);
   const [eightK,     setEightK]     = useState(true);
   const [transcripts, setTranscripts] = useState(false);
   const [quiet,      setQuiet]      = useState('22-07');
 
-  const toggle = (setter) => (v) => {
-    haptics.select();
-    setter(v);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      if (cancelled) return;
+      setEmail(session?.user?.email ?? '');
+      const uid = session?.user?.id;
+      setUserId(uid ?? null);
+      if (!uid) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('tier, notify_briefings, notify_events, notify_transcripts, quiet_hours_preset')
+        .eq('id', uid)
+        .maybeSingle();
+      if (cancelled || error || !data) return;
+      setTier(data.tier || 'free');
+      setBriefings(!!data.notify_briefings);
+      setEightK(!!data.notify_events);
+      setTranscripts(!!data.notify_transcripts);
+      setQuiet(data.quiet_hours_preset || '22-07');
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const persistPref = async (column, value) => {
+    if (!userId) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ [column]: value })
+      .eq('id', userId);
+    if (error && __DEV__) console.warn('[settings] update', column, error.message);
   };
 
-  const noop = () => {};
+  const toggle = (setter, column) => (v) => {
+    haptics.select();
+    setter(v);
+    if (column) persistPref(column, v);
+  };
+
+  const setQuietPersistent = (preset) => {
+    setQuiet(preset);
+    persistPref('quiet_hours_preset', preset);
+  };
+
+  const planLabel = tier === 'pro' ? 'Pro' : 'Free';
+
   const openDisclaimer = () => router.push('/settings/disclaimer');
   const openPrivacy = () => router.push('/settings/privacy');
   const openTerms = () => router.push('/settings/terms');
@@ -59,15 +95,11 @@ export default function SettingsScreen() {
     haptics.tap();
     subscriptionSheet.current?.expand();
   };
-  // p10-3: real sign-out — supabase clears its session; we clear the local
-  // ack so the next user on this device sees onboarding before /today.
-  // useAuthRouting subscribes to onAuthStateChange and replaces to /sign-in
-  // when supabase emits SIGNED_OUT.
+  // ack now lives in profiles.disclaimer_ack_at; server-side per-user. signing
+  // out doesn't clear it — the same user signing back in stays acked. a different
+  // user signing in has their own profile row with their own ack state.
   const confirmSignOut = async () => {
-    await Promise.all([
-      supabase.auth.signOut(),
-      AsyncStorage.removeItem(ACK_KEY),
-    ]);
+    await supabase.auth.signOut();
   };
 
   return (
@@ -86,7 +118,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={icon(Sparkles)}
             label="Plan"
-            value="Free"
+            value={planLabel}
             onPress={openSubscription}
           />
         </SettingsGroup>
@@ -95,17 +127,17 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={icon(Bell)}
             label="Pre-earnings briefings"
-            trailing={<NotificationSwitch value={briefings} onChange={toggle(setBriefings)} />}
+            trailing={<NotificationSwitch value={briefings} onChange={toggle(setBriefings, 'notify_briefings')} />}
           />
           <SettingsRow
             icon={icon(Bell)}
             label="8-K release alerts"
-            trailing={<NotificationSwitch value={eightK} onChange={toggle(setEightK)} />}
+            trailing={<NotificationSwitch value={eightK} onChange={toggle(setEightK, 'notify_events')} />}
           />
           <SettingsRow
             icon={icon(Bell)}
             label="Post-call transcripts"
-            trailing={<NotificationSwitch value={transcripts} onChange={toggle(setTranscripts)} />}
+            trailing={<NotificationSwitch value={transcripts} onChange={toggle(setTranscripts, 'notify_transcripts')} />}
           />
           <SettingsRow
             icon={icon(Clock)}
@@ -116,7 +148,7 @@ export default function SettingsScreen() {
         </SettingsGroup>
 
         <SettingsGroup title="ABOUT">
-          <SettingsRow icon={icon(Info)} label="Version" value="0.1.0" />
+          <SettingsRow icon={icon(Info)} label="Version" value={APP_VERSION} />
           <SettingsRow icon={icon(FileText)} label="Disclaimer" onPress={openDisclaimer} />
           <SettingsRow icon={icon(FileText)} label="Privacy policy" onPress={openPrivacy} />
           <SettingsRow icon={icon(FileText)} label="Terms of service" onPress={openTerms} />
@@ -125,7 +157,7 @@ export default function SettingsScreen() {
         <DisclaimerFooter />
       </ScrollView>
 
-      <QuietHoursSheet ref={quietSheet} value={quiet} onChange={setQuiet} />
+      <QuietHoursSheet ref={quietSheet} value={quiet} onChange={setQuietPersistent} />
       <SignOutSheet ref={signOutSheet} onConfirm={confirmSignOut} />
       <SubscriptionSheet ref={subscriptionSheet} />
     </>

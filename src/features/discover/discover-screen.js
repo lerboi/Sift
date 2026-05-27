@@ -1,24 +1,90 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Search, X, ChevronRight } from 'lucide-react-native';
 import { Card } from '../../components/card';
 import { MonoNumber } from '../../components/mono-number';
 import { DisclaimerFooter } from '../../components/disclaimer-footer';
-import { searchCatalog } from '../watchlist/ticker-catalog';
+import { searchTickers } from '../watchlist/ticker-catalog';
+import { supabase } from '../../../lib/supabase';
 import { colors, space, radius, text } from '../../theme';
 import { haptics } from '../../lib/haptics';
 import { formatDayHeader, formatEventTime } from '../../lib/dates';
-import { MOCK_BIGGEST_EXPECTED, MOCK_SECTOR_HEAT, MOCK_BIGGEST_SURPRISES } from './mock';
+
+const SEARCH_DEBOUNCE_MS = 140;
+
+// 'Q1-2026' (sortable, server) → 'Q1 26' (display, client)
+function formatFiscalPeriod(p) {
+  if (!p) return '';
+  const m = String(p).match(/^(Q[1-4])-(\d{4})$/);
+  if (!m) return p;
+  return `${m[1]} ${m[2].slice(-2)}`;
+}
+
+function shapeExpected(row) {
+  return {
+    ticker: row.ticker_symbol,
+    name: row.ticker_name,
+    period: formatFiscalPeriod(row.fiscal_period),
+    expectedAt: row.expected_release_at,
+    beatProb: Number(row.beat_probability ?? 0),
+    expectedMovePct: Number(row.expected_move_pct ?? 0),
+  };
+}
+
+function shapeSurprise(row) {
+  return {
+    id: row.event_id,
+    ticker: row.ticker_symbol,
+    name: row.ticker_name,
+    period: formatFiscalPeriod(row.fiscal_period),
+    actualAt: row.actual_at,
+    surprisePct: Number(row.surprise_pct ?? 0),
+  };
+}
 
 export default function DiscoverScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [matches, setMatches] = useState([]);
+  const [biggestExpected, setBiggestExpected] = useState([]);
+  const [sectorHeat, setSectorHeat] = useState([]);
+  const [biggestSurprises, setBiggestSurprises] = useState([]);
 
-  const matches = useMemo(() => {
-    const q = query.trim();
-    if (!q) return [];
-    return searchCatalog(q).slice(0, 8);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [expectedRes, sectorRes, surpriseRes] = await Promise.all([
+        supabase.rpc('discover_biggest_expected', { p_limit: 4 }),
+        supabase.rpc('discover_sector_heat'),
+        supabase.rpc('discover_biggest_surprises', { p_days: 7, p_limit: 4 }),
+      ]);
+      if (cancelled) return;
+      if (expectedRes.error && __DEV__) console.warn('[discover] expected', expectedRes.error.message);
+      if (sectorRes.error && __DEV__) console.warn('[discover] sector_heat', sectorRes.error.message);
+      if (surpriseRes.error && __DEV__) console.warn('[discover] surprises', surpriseRes.error.message);
+      setBiggestExpected((expectedRes.data ?? []).map(shapeExpected));
+      setSectorHeat((sectorRes.data ?? []).map((r) => ({ sector: r.sector, reporting: Number(r.reporting) })));
+      setBiggestSurprises((surpriseRes.data ?? []).map(shapeSurprise));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setMatches([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const data = await searchTickers(trimmed, [], 8);
+      if (!cancelled) setMatches(data);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [query]);
 
   const openTicker = (symbol) => {
@@ -81,15 +147,17 @@ export default function DiscoverScreen() {
       {/* compliance: "Model" prefix + "expected" qualifier — no advisory verbs */}
       <SectionLabel>MODEL — BIGGEST EXPECTED MOVES THIS WEEK</SectionLabel>
       <Card padding={0} style={styles.card}>
-        {MOCK_BIGGEST_EXPECTED.map((e, i) => (
+        {biggestExpected.length === 0 ? (
+          <Text style={styles.emptyRail}>No expected reports this week.</Text>
+        ) : biggestExpected.map((e, i) => (
           <Pressable
-            key={e.ticker}
+            key={`${e.ticker}-${e.period}`}
             onPress={() => openTicker(e.ticker)}
             accessibilityRole="button"
             accessibilityLabel={`${e.ticker} ${e.name}, reports ${formatDayHeader(e.expectedAt).absolute}, model beat probability ${Math.round(e.beatProb * 100)} percent, expected move ${(e.expectedMovePct * 100).toFixed(1)} percent`}
             style={({ pressed }) => [
               styles.expectedRow,
-              i !== MOCK_BIGGEST_EXPECTED.length - 1 && styles.divider,
+              i !== biggestExpected.length - 1 && styles.divider,
               pressed && styles.pressed,
             ]}
           >
@@ -113,14 +181,16 @@ export default function DiscoverScreen() {
 
       <SectionLabel>REPORTING THIS WEEK BY SECTOR</SectionLabel>
       <Card padding={0} style={styles.card}>
-        {MOCK_SECTOR_HEAT.map((s, i) => (
+        {sectorHeat.length === 0 ? (
+          <Text style={styles.emptyRail}>No sector reports scheduled this week.</Text>
+        ) : sectorHeat.map((s, i) => (
           <View
             key={s.sector}
             accessibilityRole="text"
             accessibilityLabel={`${s.sector}, ${s.reporting} companies reporting`}
             style={[
               styles.sectorRow,
-              i !== MOCK_SECTOR_HEAT.length - 1 && styles.divider,
+              i !== sectorHeat.length - 1 && styles.divider,
             ]}
           >
             <Text style={styles.sectorName}>{s.sector}</Text>
@@ -132,7 +202,9 @@ export default function DiscoverScreen() {
 
       <SectionLabel>BIGGEST RECENT SURPRISES — MARKET</SectionLabel>
       <Card padding={0} style={styles.card}>
-        {MOCK_BIGGEST_SURPRISES.map((e, i) => {
+        {biggestSurprises.length === 0 ? (
+          <Text style={styles.emptyRail}>No recent surprises to surface.</Text>
+        ) : biggestSurprises.map((e, i) => {
           const beat = e.surprisePct > 0;
           const color = beat ? colors.signal.positive : colors.signal.negative;
           const arrow = beat ? '▲' : '▼';
@@ -145,7 +217,7 @@ export default function DiscoverScreen() {
               accessibilityLabel={`${e.ticker} ${e.name}, ${e.period}, ${(e.surprisePct * 100).toFixed(1)} percent ${beat ? 'beat' : 'miss'}`}
               style={({ pressed }) => [
                 styles.surpriseRow,
-                i !== MOCK_BIGGEST_SURPRISES.length - 1 && styles.divider,
+                i !== biggestSurprises.length - 1 && styles.divider,
                 pressed && styles.pressed,
               ]}
             >
@@ -243,6 +315,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     marginTop: 4,
+  },
+  emptyRail: {
+    ...text.footnote,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    paddingVertical: space[4],
+    paddingHorizontal: space[4],
   },
 
   symInline: { ...text.headlineMono, color: colors.text.primary },

@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, Platform, Pressable } from 'react-native';
+import { useMemo, useRef } from 'react';
+import { ScrollView, View, Text, StyleSheet, Platform } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -10,26 +10,25 @@ import { EventTimelineCard } from '../../components/event-timeline-card';
 import { Sparkline } from '../../components/sparkline';
 import { BriefingCard } from '../../components/briefing-card';
 import { DisclaimerFooter } from '../../components/disclaimer-footer';
+import { InlineError } from '../../components/inline-error';
 import { Button } from '../../components/button';
 import { haptics } from '../../lib/haptics';
 import { groupByDay } from '../../lib/dates';
 import { colors, space, text } from '../../theme';
-import { getTickerMock } from './mock';
+import { useTickerDetail } from './use-ticker-detail';
+import { useSparkline } from '../watchlist/use-sparkline';
 import { TranscriptCard } from './transcript-card';
 
 export default function TickerScreen() {
   const { ticker } = useLocalSearchParams();
+  const symbol = String(ticker || '').toUpperCase();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const t = getTickerMock(ticker);
-  // tab-scoped — ticker detail lives in Watchlist's Stack (p11-8)
-  const openEvent = (id) => router.push(`/watchlist/events/${id}`);
 
-  const [onWatchlist, setOnWatchlist] = useState(false);
-  const toggleWatchlist = () => {
-    haptics.select();
-    setOnWatchlist((v) => !v);
-  };
+  const { meta, timeline, loading, error, onWatchlist, toggleWatchlist, refresh } = useTickerDetail(symbol);
+  const sparkline = useSparkline(symbol);
+
+  const openEvent = (id) => router.push(`/watchlist/events/${id}`);
 
   const methodologySheet = useRef(null);
   const openMethodology = () => {
@@ -37,17 +36,42 @@ export default function TickerScreen() {
     methodologySheet.current?.expand();
   };
 
-  // ctaHeight reserves bottom space so the sticky cta doesn't cover the last item
+  const onToggle = () => {
+    haptics.select();
+    toggleWatchlist();
+  };
+
   const ctaHeight = 56 + (insets.bottom > 0 ? insets.bottom : space[3]);
 
-  const timeline = useMemo(() => buildTimeline(t), [t]);
-  const groups = useMemo(() => groupByDay(timeline), [timeline]);
-  const change30d = useMemo(() => percentChange(t.sparkline), [t.sparkline]);
+  // map server timeline shape onto groupByDay's expected fields
+  const groupable = useMemo(() => timeline.map((item) => ({
+    ...item,
+    expectedAt: item.kind === 'earnings-upcoming' ? item.occurredAt : null,
+    actualAt: item.kind === 'earnings-upcoming' ? null : item.occurredAt,
+  })), [timeline]);
+  const groups = useMemo(() => groupByDay(groupable), [groupable]);
+  const change30d = useMemo(() => percentChange(sparkline), [sparkline]);
   const changeSign = change30d >= 0 ? '+' : '';
+
+  const nextUpcoming = useMemo(
+    () => timeline.find((i) => i.kind === 'earnings-upcoming') || null,
+    [timeline],
+  );
+
+  if (error) {
+    return (
+      <>
+        <Stack.Screen options={{ title: symbol, headerLargeTitle: false }} />
+        <ScrollView style={styles.root} contentContainerStyle={styles.centerScroll}>
+          <InlineError title={`Couldn't load ${symbol}`} message={error.message} onRetry={refresh} />
+        </ScrollView>
+      </>
+    );
+  }
 
   return (
     <>
-      <Stack.Screen options={{ title: t.symbol, headerLargeTitle: false }} />
+      <Stack.Screen options={{ title: symbol, headerLargeTitle: false }} />
       <View style={styles.root}>
         <ScrollView
           style={styles.scrollRoot}
@@ -55,22 +79,30 @@ export default function TickerScreen() {
           contentInsetAdjustmentBehavior="automatic"
         >
           <View style={styles.hero}>
-            <Text style={styles.symbol}>{t.symbol}</Text>
-            <Text style={styles.subline}>{t.name} · {t.sector}</Text>
+            <Text style={styles.symbol}>{symbol}</Text>
+            <Text style={styles.subline}>
+              {meta?.name ?? symbol}{meta?.sector ? ` · ${meta.sector}` : ''}
+            </Text>
             <View style={styles.sparkRow}>
-              <Sparkline data={t.sparkline} width={140} height={32} color={colors.text.secondary} />
+              <Sparkline data={sparkline} width={140} height={32} color={colors.text.secondary} />
               <Text style={styles.changeLabel}>{changeSign}{change30d.toFixed(1)}% 30d</Text>
             </View>
           </View>
 
           <View style={styles.divider} />
 
+          {!loading && groups.length === 0 ? (
+            <Text style={styles.emptyLine}>
+              No upcoming or recent earnings for {symbol} yet.
+            </Text>
+          ) : null}
+
           {groups.map((g) => (
             <View key={g.dateISO} style={styles.group}>
               <DayHeader iso={`${g.dateISO}T12:00:00`} />
               {g.items.map((item) => (
                 <View key={item.id} style={styles.cardWrap}>
-                  {renderItem(item, { onOpenEvent: openEvent, onInfoPress: openMethodology })}
+                  {renderItem(item, { symbol, name: meta?.name ?? symbol, onOpenEvent: openEvent, onInfoPress: openMethodology })}
                 </View>
               ))}
             </View>
@@ -89,14 +121,14 @@ export default function TickerScreen() {
         >
           <Button
             variant={onWatchlist ? 'secondary' : 'primary'}
-            onPress={toggleWatchlist}
+            onPress={onToggle}
             icon={
               onWatchlist
                 ? <BookmarkCheck size={16} color={colors.text.primary} strokeWidth={1.75} />
                 : <BookmarkPlus size={16} color={colors.accent.on} strokeWidth={1.75} />
             }
             fullWidth
-            accessibilityLabel={onWatchlist ? `Remove ${t.symbol} from watchlist` : `Add ${t.symbol} to watchlist`}
+            accessibilityLabel={onWatchlist ? `Remove ${symbol} from watchlist` : `Add ${symbol} to watchlist`}
           >
             {onWatchlist ? 'On watchlist' : 'Add to watchlist'}
           </Button>
@@ -107,17 +139,19 @@ export default function TickerScreen() {
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>How this prediction works</Text>
           <Text style={styles.sheetBody}>
-            Sift's beat-probability model uses the last 12 quarters of {t.symbol}'s
+            Sift's beat-probability model uses the last 12 quarters of {symbol}'s
             results, the 30-day path of consensus EPS revisions, guidance language
             from the prior earnings call, and sector-aggregate momentum heading
             into the report.
           </Text>
-          <Text style={styles.sheetBody}>
-            The {Math.round(t.nextEarnings.beatProb * 100)}% you see is the
-            calibrated probability that the company beats consensus EPS for{' '}
-            {t.nextEarnings.period}. It is statistical — not a forecast of what
-            will happen, and not personalised to any portfolio.
-          </Text>
+          {nextUpcoming?.payload.beatProb != null ? (
+            <Text style={styles.sheetBody}>
+              The {Math.round(nextUpcoming.payload.beatProb * 100)}% you see is the
+              calibrated probability that the company beats consensus EPS for{' '}
+              {nextUpcoming.payload.period}. It is statistical — not a forecast of
+              what will happen, and not personalised to any portfolio.
+            </Text>
+          ) : null}
           <Text style={styles.sheetMuted}>
             Sift provides educational research only. Not investment advice. See
             the full disclaimer in Settings.
@@ -128,98 +162,56 @@ export default function TickerScreen() {
   );
 }
 
-// merges all of a ticker's content into one timeline-shaped array.
-// each item has { id, kind, expectedAt|actualAt, payload } — payload is the
-// original record. groupByDay reads expectedAt||actualAt as date, so we always
-// expose at least one of those.
-function buildTimeline(t) {
-  const stream = [];
-  if (t.nextEarnings?.expectedAt) {
-    stream.push({
-      id: `next-${t.symbol}`,
-      kind: 'earnings-upcoming',
-      expectedAt: t.nextEarnings.expectedAt,
-      payload: t,
-    });
-  }
-  for (const e of t.pastEvents ?? []) {
-    stream.push({
-      id: `evt-${e.id}`,
-      kind: 'earnings-past',
-      actualAt: e.actualAt,
-      expectedAt: e.expectedAt,
-      payload: { ...e, ticker: t.symbol, name: t.name },
-    });
-  }
-  for (const b of t.pastBriefings ?? []) {
-    stream.push({
-      id: `brf-${b.id}`,
-      kind: 'briefing',
-      actualAt: b.publishedAt,
-      payload: b,
-    });
-  }
-  for (const tr of t.transcripts ?? []) {
-    stream.push({
-      id: `tr-${tr.id}`,
-      kind: 'transcript',
-      actualAt: tr.recordedAt,
-      payload: tr,
-    });
-  }
-  return stream;
-}
-
-function renderItem(item, { onOpenEvent, onInfoPress }) {
+function renderItem(item, { symbol, name, onOpenEvent, onInfoPress }) {
   if (item.kind === 'earnings-upcoming') {
-    const t = item.payload;
+    const p = item.payload;
     return (
       <EventTimelineCard
         state="upcoming"
         hideIdentity
-        ticker={t.symbol}
-        name={t.name}
-        period={t.nextEarnings.period}
-        expectedAt={t.nextEarnings.expectedAt}
-        epsEst={t.nextEarnings.epsEst}
-        beatProb={t.nextEarnings.beatProb}
+        ticker={symbol}
+        name={name}
+        period={p.period}
+        expectedAt={p.expectedAt}
+        epsEst={p.epsEst}
+        beatProb={p.beatProb}
         briefingReady
         onInfoPress={onInfoPress}
       />
     );
   }
   if (item.kind === 'earnings-past') {
-    const e = item.payload;
+    const p = item.payload;
     return (
       <EventTimelineCard
         state="past"
         hideIdentity
-        ticker={e.ticker}
-        name={e.name}
-        period={e.period}
-        expectedAt={e.expectedAt}
-        actualAt={e.actualAt}
-        epsActual={e.epsActual}
-        epsEst={e.epsEst}
-        surprisePct={e.surprisePct}
-        onPress={() => onOpenEvent(e.id)}
-        onOpenDetail={() => onOpenEvent(e.id)}
+        ticker={symbol}
+        name={name}
+        period={p.period}
+        expectedAt={p.expectedAt}
+        actualAt={p.actualAt}
+        epsActual={p.epsActual}
+        epsEst={p.epsEst}
+        surprisePct={p.surprisePct}
+        onPress={() => onOpenEvent(item.id)}
+        onOpenDetail={() => onOpenEvent(item.id)}
       />
     );
   }
   if (item.kind === 'briefing') {
-    const b = item.payload;
-    return <BriefingCard title={b.title} date={b.date} content={b.content} showDate={false} />;
+    const p = item.payload;
+    return <BriefingCard title={p.title} date={p.date} content={p.content} showDate={false} />;
   }
   if (item.kind === 'transcript') {
-    const tr = item.payload;
+    const p = item.payload;
     return (
       <TranscriptCard
-        period={tr.period}
-        date={tr.date}
-        tone={tr.tone}
-        novelTopics={tr.novelTopics}
-        snippet={tr.snippet}
+        period={p.period}
+        date={p.date}
+        tone={p.tone}
+        novelTopics={p.novelTopics}
+        snippet={p.snippet}
         showDate={false}
       />
     );
@@ -239,6 +231,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg.base },
   scrollRoot: { flex: 1 },
   scroll: { padding: space[4] },
+  centerScroll: { flexGrow: 1, justifyContent: 'center', padding: space[5] },
   ctaBar: {
     position: 'absolute',
     left: 0,
@@ -251,28 +244,11 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
 
-  hero: {
-    marginBottom: space[3],
-  },
-  symbol: {
-    ...text.displayLgMono,
-    color: colors.text.primary,
-  },
-  subline: {
-    ...text.subhead,
-    color: colors.text.secondary,
-    marginTop: space[1],
-  },
-  sparkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[3],
-    marginTop: space[3],
-  },
-  changeLabel: {
-    ...text.subheadMono,
-    color: colors.text.secondary,
-  },
+  hero: { marginBottom: space[3] },
+  symbol: { ...text.displayLgMono, color: colors.text.primary },
+  subline: { ...text.subhead, color: colors.text.secondary, marginTop: space[1] },
+  sparkRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginTop: space[3] },
+  changeLabel: { ...text.subheadMono, color: colors.text.secondary },
 
   divider: {
     height: StyleSheet.hairlineWidth,
@@ -280,12 +256,15 @@ const styles = StyleSheet.create({
     marginVertical: space[4],
   },
 
-  group: {
-    marginTop: space[3],
+  emptyLine: {
+    ...text.body,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    paddingVertical: space[6],
   },
-  cardWrap: {
-    marginBottom: space[3],
-  },
+
+  group: { marginTop: space[3] },
+  cardWrap: { marginBottom: space[3] },
 
   sheet: { paddingHorizontal: space[5], paddingTop: space[3], gap: space[4] },
   sheetTitle: { ...text.title, color: colors.text.primary },

@@ -6,12 +6,12 @@ import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeabl
 import { Card } from '../../components/card';
 import { EmptyState } from '../../components/empty-state';
 import { SortSelector } from '../../components/sort-selector';
+import { InlineError } from '../../components/inline-error';
 import { colors, space, text } from '../../theme';
 import { haptics } from '../../lib/haptics';
-import { MOCK_WATCHLIST } from './mock';
 import { WatchlistRow } from './watchlist-row';
 import { AddTickerSheet } from './add-ticker-sheet';
-import { TICKER_CATALOG } from './ticker-catalog';
+import { useWatchlist } from './use-watchlist';
 
 const SORT_OPTIONS = [
   { value: 'date',   label: 'Next earnings' },
@@ -22,36 +22,21 @@ const SORT_OPTIONS = [
 function applySort(items, key) {
   if (key === 'alpha') return [...items].sort((a, b) => a.symbol.localeCompare(b.symbol));
   if (key === 'date')  return [...items].sort((a, b) => a.nextEarnings.daysAway - b.nextEarnings.daysAway);
-  return items; // 'recent' — preserve insertion order (newer items are prepended)
+  return items;
 }
 
 export default function WatchlistScreen() {
   const router = useRouter();
-  const [items, setItems] = useState(MOCK_WATCHLIST);
+  const { items, loading, error, add, remove, refresh } = useWatchlist();
   const [sortKey, setSortKey] = useState('date');
   const addSheet = useRef(null);
 
   const sorted = useMemo(() => applySort(items, sortKey), [items, sortKey]);
 
-  const remove = (symbol) => {
+  const onAdd = (symbol) => add(symbol);
+  const onRemove = (symbol) => {
     haptics.warning();
-    setItems((cur) => cur.filter((i) => i.symbol !== symbol));
-  };
-
-  const add = (symbol) => {
-    const entry = TICKER_CATALOG.find((t) => t.symbol === symbol);
-    if (!entry) return;
-    setItems((cur) => [
-      {
-        symbol: entry.symbol,
-        name: entry.name,
-        nextEarnings: { period: 'Q? 26', date: '—', daysAway: 99 },
-        sparkline: [100, 100, 100, 100, 100],
-        briefingReady: false,
-        trend: 'flat',
-      },
-      ...cur,
-    ]);
+    remove(symbol);
   };
 
   const openSheet = () => {
@@ -75,7 +60,26 @@ export default function WatchlistScreen() {
     ),
   };
 
-  if (items.length === 0) {
+  if (error) {
+    return (
+      <>
+        <Stack.Screen options={screenOptions} />
+        <ScrollView
+          style={styles.root}
+          contentContainerStyle={styles.scrollEmpty}
+          contentInsetAdjustmentBehavior="automatic"
+        >
+          <InlineError
+            title="Couldn't load your watchlist"
+            message={error.message}
+            onRetry={refresh}
+          />
+        </ScrollView>
+      </>
+    );
+  }
+
+  if (!loading && items.length === 0) {
     return (
       <>
         <Stack.Screen options={screenOptions} />
@@ -91,7 +95,7 @@ export default function WatchlistScreen() {
             cta={{ label: 'Add ticker', onPress: openSheet }}
           />
         </ScrollView>
-        <AddTickerSheet ref={addSheet} onAdd={add} excludeSymbols={items.map((i) => i.symbol)} />
+        <AddTickerSheet ref={addSheet} onAdd={onAdd} excludeSymbols={items.map((i) => i.symbol)} />
       </>
     );
   }
@@ -110,7 +114,7 @@ export default function WatchlistScreen() {
 
         <Card padding={0} style={styles.card}>
           {sorted.map((item, i) => (
-            <SwipeableRow key={item.symbol} onRemove={() => remove(item.symbol)}>
+            <SwipeableRow key={item.symbol} onRemove={() => onRemove(item.symbol)}>
               <WatchlistRow
                 {...item}
                 onPress={() => openTicker(item.symbol)}
@@ -120,7 +124,7 @@ export default function WatchlistScreen() {
           ))}
         </Card>
       </ScrollView>
-      <AddTickerSheet ref={addSheet} onAdd={add} excludeSymbols={items.map((i) => i.symbol)} />
+      <AddTickerSheet ref={addSheet} onAdd={onAdd} excludeSymbols={items.map((i) => i.symbol)} />
     </>
   );
 }
